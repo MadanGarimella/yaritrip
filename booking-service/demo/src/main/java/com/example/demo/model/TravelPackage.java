@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import com.example.demo.model.Activity;
 import com.example.demo.model.ItineraryDay;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import com.example.demo.model.Attraction;
 import com.example.demo.model.City;
@@ -42,13 +43,17 @@ public class TravelPackage {
         @JoinColumn(name = "to_city_id", nullable = false)
         private City toCity;
 
-        @OneToMany(mappedBy = "travelPackage", cascade = CascadeType.ALL)@JsonManagedReference
+        @OneToMany(mappedBy = "travelPackage", cascade = CascadeType.ALL)
+        @JsonManagedReference
+        @JsonIgnore   // ✅ ADD THIS LINE
         private List<PackageImage> images;
 
         @OneToMany(mappedBy = "travelPackage", cascade = CascadeType.ALL)
+        @JsonIgnore
         private List<ItineraryDay> itineraryDays;
 
         @OneToMany(mappedBy = "travelPackage", cascade = CascadeType.ALL)
+        @JsonIgnore
         private List<Activity> activities;
         // -----------------------------
         // TRAVEL INFO
@@ -67,6 +72,9 @@ public class TravelPackage {
 
         @Column(nullable = false)
         private Integer totalDays;
+
+        @Column(nullable = false)
+        private String category;
 
         // -----------------------------
         // DISPLAY INFO

@@ -269,6 +269,7 @@ public class DataInitializer implements CommandLineRunner {
                                                                 .totalRooms(10)
                                                                 .guestsPerRoom(8)
                                                                 .attractions(attractions)
+                                                                .category(isDomestic ? "DOMESTIC" : "INTERNATIONAL")
                                                                 .build());
                         }
                 }

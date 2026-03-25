@@ -20,7 +20,7 @@ public class Transfer {
     private String title;
 
     @Column(length = 2000)
-    private String description;
+    private String description; 
 
     @ManyToOne(fetch = FetchType.LAZY)
     private TravelPackage travelPackage;
