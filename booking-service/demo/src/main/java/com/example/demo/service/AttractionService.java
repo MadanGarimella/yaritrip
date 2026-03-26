@@ -4,6 +4,7 @@ import com.example.demo.dto.AttractionDetailResponse;
 import com.example.demo.dto.AttractionUpdateRequest;
 import com.example.demo.dto.AttractionResponse;
 import com.example.demo.model.Attraction;
+import com.example.demo.model.AttractionPackage;
 import com.example.demo.repository.AttractionRepository;
 import com.example.demo.repository.AttractionPackageRepository;
 
@@ -19,9 +20,10 @@ public class AttractionService {
 
     private final AttractionRepository attractionRepository;
     private final AttractionPackageRepository attractionPackageRepository;
+
     public Attraction create(Attraction attraction) {
-    return attractionRepository.save(attraction);
-}
+        return attractionRepository.save(attraction);
+    }
 
     public List<AttractionResponse> getPopularByCity(String city) {
 
@@ -61,8 +63,9 @@ public class AttractionService {
 
     private AttractionResponse mapToPopularResponse(Attraction a) {
 
-        UUID packageId = attractionPackageRepository
-                .findPackageIdByAttraction(a.getId());
+        List<AttractionPackage> packages = attractionPackageRepository.findAllByAttractionId(a.getId());
+
+        UUID packageId = packages.isEmpty() ? null : packages.get(0).getId();
 
         return new AttractionResponse(
                 a.getId(),
@@ -72,8 +75,7 @@ public class AttractionService {
                 a.getDescription(),
                 a.getImageUrl(),
                 a.getRating() != null ? a.getRating() : 0.0,
-                a.getReviews() != null ? a.getReviews() : 0
-        );
+                a.getReviews() != null ? a.getReviews() : 0);
     }
 
     private AttractionDetailResponse mapToDetailResponse(Attraction a) {
@@ -85,7 +87,6 @@ public class AttractionService {
                 a.getDescription(),
                 a.getImageUrl(),
                 a.getRating() != null ? a.getRating() : 0.0,
-                a.getReviews() != null ? a.getReviews() : 0
-        );
+                a.getReviews() != null ? a.getReviews() : 0);
     }
 }

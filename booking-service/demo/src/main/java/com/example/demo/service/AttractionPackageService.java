@@ -8,6 +8,9 @@ import com.example.demo.repository.AttractionPackageRepository;
 import com.example.demo.repository.AttractionRepository;
 import com.example.demo.repository.TravelPackageRepository;
 
+import java.util.List;
+import org.springframework.data.repository.query.Param;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -55,7 +58,14 @@ public class AttractionPackageService {
     }
 
     public AttractionPackage getPackageByAttractionId(UUID attractionId) {
-        return repository.findByAttractionId(attractionId).orElse(null);
+
+        List<AttractionPackage> packages = repository.findAllByAttractionId(attractionId);
+
+        if (packages.isEmpty()) {
+            return null;
+        }
+
+        return packages.get(0); // pick first to avoid crash
     }
 
     public List<AttractionPackage> getAll() {
