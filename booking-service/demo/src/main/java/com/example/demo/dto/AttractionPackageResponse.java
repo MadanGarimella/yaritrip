@@ -19,5 +19,5 @@ public class AttractionPackageResponse {
     private String image;
     private List<String> images;
     private String overview;
-
+    private UUID travelPackageId;
 }

@@ -34,8 +34,8 @@ public class DataInitializer implements CommandLineRunner {
         public void run(String... args) {
 
                 // Clear old data
-                travelPackageRepository.deleteAll();
                 attractionPackageRepository.deleteAll();
+                travelPackageRepository.deleteAll();
                 attractionRepository.deleteAll();
                 stayRepository.deleteAll();
                 cityRepository.deleteAll();
@@ -48,6 +48,16 @@ public class DataInitializer implements CommandLineRunner {
                 seedAttractionPackages();
 
                 System.out.println("✅ All data seeded successfully");
+
+                try {
+                        seedAttractionPackages();
+                } catch (Exception e) {
+                        System.out.println("⚠️ Skipping attraction seeding: " + e.getMessage());
+                }
+
+                if (attractionPackageRepository.count() == 0) {
+                        seedAttractionPackages();
+                }
         }
 
         /*
@@ -284,10 +294,37 @@ public class DataInitializer implements CommandLineRunner {
          */
         private void seedAttractionPackages() {
 
+                System.out.println("TOTAL TRAVEL PACKAGES: " + travelPackageRepository.count());
+                travelPackageRepository.findAll()
+                                .forEach(p -> System.out.println("→ " + p.getToCity().getName()));
+
                 List<Attraction> dubai = attractionRepository.findByLocationIgnoreCase("Dubai");
                 List<Attraction> india = attractionRepository.findByLocationIgnoreCase("India");
                 List<Attraction> singapore = attractionRepository.findByLocationIgnoreCase("Singapore");
                 List<Attraction> bangkok = attractionRepository.findByLocationIgnoreCase("Bangkok");
+
+                // ✅ FETCH CORRESPONDING TRAVEL PACKAGES (CRITICAL FIX)
+                TravelPackage dubaiPackage = travelPackageRepository.findAll().stream()
+                                .filter(p -> p.getToCity() != null && "Dubai".equalsIgnoreCase(p.getToCity().getName()))
+                                .findFirst()
+                                .orElse(null);
+
+                TravelPackage indiaPackage = travelPackageRepository.findAll().stream()
+                                .filter(p -> p.getToCity() != null && "India".equalsIgnoreCase(p.getToCity().getName()))
+                                .findFirst()
+                                .orElse(null);
+
+                TravelPackage singaporePackage = travelPackageRepository.findAll().stream()
+                                .filter(p -> p.getToCity() != null
+                                                && "Singapore".equalsIgnoreCase(p.getToCity().getName()))
+                                .findFirst()
+                                .orElse(null);
+
+                TravelPackage bangkokPackage = travelPackageRepository.findAll().stream()
+                                .filter(p -> p.getToCity() != null
+                                                && "Bangkok".equalsIgnoreCase(p.getToCity().getName()))
+                                .findFirst()
+                                .orElse(null);
 
                 attractionPackageRepository.save(
                                 AttractionPackage.builder()
@@ -296,8 +333,10 @@ public class DataInitializer implements CommandLineRunner {
                                                 .nights(5)
                                                 .price(120000)
                                                 .rating(4.8)
-                                                .imageUrl("/images/dubai-package.jpg")
+                                                .imageUrl("/images/attractions/dubai/aerial-view-downtown-dubai-autumn-day-united-arab-emirates.jpg")
                                                 .overview("Explore Dubai with Burj Khalifa and Museum of the Future.")
+                                                .attractions(dubai)
+                                                .travelPackage(dubaiPackage) // ✅ FIXED
                                                 .build());
 
                 attractionPackageRepository.save(
@@ -307,8 +346,10 @@ public class DataInitializer implements CommandLineRunner {
                                                 .nights(4)
                                                 .price(55000)
                                                 .rating(4.7)
-                                                .imageUrl("/images/india-package.jpg")
+                                                .imageUrl("/images/attractions/india/india-package.jpg")
                                                 .overview("Discover Charminar and Indian heritage.")
+                                                .attractions(india)
+                                                .travelPackage(indiaPackage) // ✅ FIXED
                                                 .build());
 
                 attractionPackageRepository.save(
@@ -318,8 +359,10 @@ public class DataInitializer implements CommandLineRunner {
                                                 .nights(4)
                                                 .price(98000)
                                                 .rating(4.7)
-                                                .imageUrl("/images/singapore-package.jpg")
+                                                .imageUrl("/images/attractions/singapore/singapore-package.jpg")
                                                 .overview("Experience Singapore skyline and Marina Bay.")
+                                                .attractions(singapore)
+                                                .travelPackage(singaporePackage) // ✅ FIXED
                                                 .build());
 
                 attractionPackageRepository.save(
@@ -329,8 +372,10 @@ public class DataInitializer implements CommandLineRunner {
                                                 .nights(4)
                                                 .price(87000)
                                                 .rating(4.6)
-                                                .imageUrl("/images/bangkok-package.jpg")
+                                                .imageUrl("/images/attractions/bangkok/bangkok-package.jpg")
                                                 .overview("Discover temples and Thai culture.")
+                                                .attractions(bangkok)
+                                                .travelPackage(bangkokPackage) // ✅ FIXED
                                                 .build());
 
                 System.out.println("✅ Attraction packages seeded successfully");

@@ -3,8 +3,10 @@ package com.example.demo.service;
 import com.example.demo.dto.CreateAttractionPackageRequest;
 import com.example.demo.model.Attraction;
 import com.example.demo.model.AttractionPackage;
+import com.example.demo.model.TravelPackage;
 import com.example.demo.repository.AttractionPackageRepository;
 import com.example.demo.repository.AttractionRepository;
+import com.example.demo.repository.TravelPackageRepository;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -18,15 +20,19 @@ public class AttractionPackageService {
 
     private final AttractionPackageRepository repository;
     private final AttractionRepository attractionRepository;
+    private final TravelPackageRepository travelPackageRepository; // ✅ ADDED
 
     public AttractionPackage createPackage(CreateAttractionPackageRequest request) {
 
-        List<Attraction> attractions =
-                attractionRepository.findAllById(request.getAttractionIds());
+        List<Attraction> attractions = attractionRepository.findAllById(request.getAttractionIds());
 
         if (attractions.isEmpty()) {
             throw new RuntimeException("No valid attractions found for given IDs");
         }
+
+        // ✅ FETCH REAL TRAVEL PACKAGE
+        TravelPackage travelPackage = travelPackageRepository.findById(request.getTravelPackageId())
+                .orElseThrow(() -> new RuntimeException("Travel Package not found"));
 
         AttractionPackage pkg = AttractionPackage.builder()
                 .title(request.getTitle())
@@ -37,6 +43,7 @@ public class AttractionPackageService {
                 .imageUrl(request.getImageUrl())
                 .overview(request.getOverview())
                 .attractions(attractions)
+                .travelPackage(travelPackage) // ✅ CRITICAL FIX
                 .build();
 
         return repository.save(pkg);
@@ -48,8 +55,7 @@ public class AttractionPackageService {
     }
 
     public AttractionPackage getPackageByAttractionId(UUID attractionId) {
-        return repository.findByAttractionId(attractionId)
-                .orElseThrow(() -> new RuntimeException("Package not found for attraction"));
+        return repository.findByAttractionId(attractionId).orElse(null);
     }
 
     public List<AttractionPackage> getAll() {

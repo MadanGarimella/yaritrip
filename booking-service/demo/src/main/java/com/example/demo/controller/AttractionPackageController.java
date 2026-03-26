@@ -21,14 +21,10 @@ public class AttractionPackageController {
 
     private final AttractionPackageService service;
 
-
-
     @PostMapping("/attraction-packages")
     public AttractionPackage createPackage(@RequestBody CreateAttractionPackageRequest request) {
         return service.createPackage(request);
     }
-
-
 
     @GetMapping("/attraction-packages/{id}")
     public ResponseEntity<AttractionPackageResponse> getById(@PathVariable UUID id) {
@@ -38,16 +34,18 @@ public class AttractionPackageController {
         return ResponseEntity.ok(buildResponse(pkg));
     }
 
-
-
     @GetMapping("/attractions/{attractionId}/package")
-    public ResponseEntity<AttractionPackageResponse> getByAttractionId(@PathVariable UUID attractionId) {
+    public ResponseEntity<?> getByAttractionId(@PathVariable UUID attractionId) {
 
         AttractionPackage pkg = service.getPackageByAttractionId(attractionId);
 
+        if (pkg == null) {
+            return ResponseEntity.status(404)
+                    .body("No package found for this attraction");
+        }
+
         return ResponseEntity.ok(buildResponse(pkg));
     }
-
 
     private AttractionPackageResponse buildResponse(AttractionPackage pkg) {
 
@@ -61,6 +59,8 @@ public class AttractionPackageController {
                 .image("http://localhost:8082" + pkg.getImageUrl())
                 .images(List.of("http://localhost:8082" + pkg.getImageUrl()))
                 .overview(pkg.getOverview())
+                .travelPackageId(
+                        pkg.getTravelPackage() != null ? pkg.getTravelPackage().getId() : null)
                 .build();
     }
 }

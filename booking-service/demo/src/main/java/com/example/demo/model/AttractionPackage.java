@@ -36,11 +36,14 @@ public class AttractionPackage {
     private String overview;
 
     @ManyToMany
-@JoinTable(
-    name = "package_attractions",
-    joinColumns = @JoinColumn(name = "package_id"),
-    inverseJoinColumns = @JoinColumn(name = "attraction_id")
-)
-private List<Attraction> attractions;
+    @JoinTable(
+        name = "attraction_package_mapping",
+        joinColumns = @JoinColumn(name = "package_id"),
+        inverseJoinColumns = @JoinColumn(name = "attraction_id")
+    )
+    private List<Attraction> attractions;
 
+    @ManyToOne
+    @JoinColumn(name = "travel_package_id")
+    private TravelPackage travelPackage;
 }

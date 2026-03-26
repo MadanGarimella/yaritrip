@@ -14,6 +14,6 @@ public class CreateAttractionPackageRequest {
     private Double rating;
     private String imageUrl;
     private String overview;
-
+    private UUID travelPackageId;
     private List<UUID> attractionIds;
 }
