@@ -17,15 +17,20 @@ public class Activity {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    @Column(nullable = false)
     private String name;
 
+    @Column(nullable = false)
     private Double price;
 
-    private Boolean optional; // true = add-on
+    @Column(nullable = false)
+    private Boolean optional;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "travel_package_id", nullable = false)
     private TravelPackage travelPackage;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    private ItineraryDay itineraryDay; // nullable
+    @JoinColumn(name = "itinerary_day_id")
+    private ItineraryDay itineraryDay;
 }

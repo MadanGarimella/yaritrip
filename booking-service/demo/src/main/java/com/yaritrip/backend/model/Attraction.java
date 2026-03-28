@@ -17,9 +17,9 @@ public class Attraction {
     @GeneratedValue
     private UUID id;
 
-    private String name;        // was title
-    private String location;    // was city
-    private String description; // was subtitle
+    private String name;
+    private String location;
+    private String description;
     private String imageUrl;
     private Double rating;
     private Integer reviews;

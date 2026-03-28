@@ -48,6 +48,7 @@ public class TravelPackageController {
                                 .price(pkg.getPrice())
                                 .rating(pkg.getRating() != null ? pkg.getRating() : 4.5)
                                 .image("http://localhost:8082" + pkg.getBannerImageUrl())
+                                // .image("http://192.168.1.11:8082" + pkg.getBannerImageUrl()) 
                                 .images(images.isEmpty()
                                                 ? List.of("/images/packages/default.jpg")
                                                 : images)

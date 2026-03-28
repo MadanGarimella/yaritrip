@@ -65,6 +65,7 @@ public class SearchController {
                     .price(pkg.getPrice())
                     .rating(pkg.getRating() != null ? pkg.getRating() : 4.5)
                     .image("http://localhost:8082" + images.get(0))
+                    // .image("http://192.168.1.11:8082" + images.get(0))
                     .images(images)
                     .build();
 

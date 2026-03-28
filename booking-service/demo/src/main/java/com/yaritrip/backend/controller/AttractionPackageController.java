@@ -57,7 +57,9 @@ public class AttractionPackageController {
                 .price(pkg.getPrice())
                 .rating(pkg.getRating() != null ? pkg.getRating() : 4.5)
                 .image("http://localhost:8082" + pkg.getImageUrl())
+                // .image("http://192.168.1.11:8082" + pkg.getImageUrl())
                 .images(List.of("http://localhost:8082" + pkg.getImageUrl()))
+                // .images(List.of("http://192.168.1.11:8082" + pkg.getImageUrl()))
                 .overview(pkg.getOverview())
                 .travelPackageId(
                         pkg.getTravelPackage() != null ? pkg.getTravelPackage().getId() : null)
