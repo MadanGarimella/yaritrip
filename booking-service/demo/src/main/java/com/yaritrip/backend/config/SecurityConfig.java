@@ -62,6 +62,8 @@ public class SecurityConfig {
 
                 // STATIC
                 .requestMatchers("/images/**").permitAll()
+                // BOOKINGS
+                .requestMatchers("/api/bookings/**").authenticated()
 
                 // AUTH
                 .requestMatchers("/api/auth/register").permitAll()
