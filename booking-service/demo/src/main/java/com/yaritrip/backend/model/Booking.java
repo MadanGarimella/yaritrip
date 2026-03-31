@@ -26,6 +26,10 @@ public class Booking {
 
     private String status;
 
+    @ManyToOne
+    @JoinColumn(name = "user_id")
+    private User user;
+
     @Builder.Default
     @ToString.Exclude
     @EqualsAndHashCode.Exclude

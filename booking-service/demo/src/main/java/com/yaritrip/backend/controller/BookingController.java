@@ -24,8 +24,13 @@ public class BookingController {
 
     // ✅ CREATE BOOKING
     @PostMapping
-    public Booking createBooking(@RequestBody BookingRequest request) {
-        return service.createBooking(request);
+    public Booking createBooking(
+            @RequestBody BookingRequest request,
+            org.springframework.security.core.Authentication authentication) {
+
+        String email = authentication.getName();
+
+        return service.createBooking(request, email);
     }
 
     // ✅ GET BOOKING + PACKAGE (SAFE VERSION)
@@ -60,5 +65,17 @@ public class BookingController {
             @PathVariable String id,
             @RequestBody BookingRequest request) {
         return service.updateTravellers(id, request);
+    }
+
+    @PostMapping("/{id}/confirm")
+    public Booking confirmBooking(
+            @PathVariable String id,
+            org.springframework.security.core.Authentication authentication) {
+
+        String email = authentication.getName();
+
+        return service.confirmBooking(
+                java.util.UUID.fromString(id),
+                email);
     }
 }

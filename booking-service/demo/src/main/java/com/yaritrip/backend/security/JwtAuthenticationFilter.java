@@ -27,53 +27,64 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         this.blacklistedTokenRepository = blacklistedTokenRepository;
     }
 
-    @Override
-    protected void doFilterInternal(HttpServletRequest request,
-                                    HttpServletResponse response,
-                                    FilterChain filterChain)
-            throws ServletException, IOException {
+@Override
+protected void doFilterInternal(HttpServletRequest request,
+                                HttpServletResponse response,
+                                FilterChain filterChain)
+        throws ServletException, IOException {
 
-        String authHeader = request.getHeader("Authorization");
+    String authHeader = request.getHeader("Authorization");
 
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            filterChain.doFilter(request, response);
-            return;
-        }
-
-        String token = authHeader.substring(7);
-
-        // 🔥 CHECK IF TOKEN IS BLACKLISTED
-        if (blacklistedTokenRepository.existsByToken(token)) {
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            return;
-        }
-
-        if (!jwtService.isTokenValid(token)) {
-            filterChain.doFilter(request, response);
-            return;
-        }
-
-        String email = jwtService.extractEmail(token);
-
-        var user = userRepository.findByEmail(email).orElse(null);
-
-        if (user != null &&
-                SecurityContextHolder.getContext().getAuthentication() == null) {
-
-            UsernamePasswordAuthenticationToken authToken =
-                    new UsernamePasswordAuthenticationToken(
-                            email,
-                            null,
-                            List.of()
-                    );
-
-            authToken.setDetails(
-                    new WebAuthenticationDetailsSource().buildDetails(request)
-            );
-
-            SecurityContextHolder.getContext().setAuthentication(authToken);
-        }
-
+    // ✅ No token → allow request (public endpoints)
+    if (authHeader == null || !authHeader.startsWith("Bearer ")) {
         filterChain.doFilter(request, response);
+        return;
     }
+
+    String token = authHeader.substring(7);
+
+    // ❌ BLACKLIST CHECK
+    if (blacklistedTokenRepository.existsByToken(token)) {
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        response.getWriter().write("Token is blacklisted");
+        return;
+    }
+
+    // ❌ TOKEN VALIDATION
+    if (!jwtService.isTokenValid(token)) {
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        response.getWriter().write("Invalid token");
+        return;
+    }
+
+    String email = jwtService.extractEmail(token);
+
+    var user = userRepository.findByEmail(email).orElse(null);
+
+    // ❌ USER NOT FOUND → CRITICAL FIX
+    if (user == null) {
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        response.getWriter().write("User not found");
+        return;
+    }
+
+    // ✅ SET AUTHENTICATION
+    if (SecurityContextHolder.getContext().getAuthentication() == null) {
+
+        UsernamePasswordAuthenticationToken authToken =
+                new UsernamePasswordAuthenticationToken(
+                        user.getEmail(),
+                        null,
+                        List.of()
+                );
+
+        authToken.setDetails(
+                new WebAuthenticationDetailsSource().buildDetails(request)
+        );
+
+        SecurityContextHolder.getContext().setAuthentication(authToken);
+    }
+
+    filterChain.doFilter(request, response);
+}
 }

@@ -23,6 +23,8 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final WalletService walletService;
+    private final NotificationService notificationService;
 
     @Async("authTaskExecutor")
     @Transactional
@@ -32,7 +34,6 @@ public class AuthService {
             throw new IllegalArgumentException("Passwords do not match");
         }
 
-        // Check both in parallel
         boolean emailExists  = userRepository.existsByEmail(request.getEmail());
         boolean mobileExists = userRepository.existsByMobile(request.getMobile());
 
@@ -52,6 +53,11 @@ public class AuthService {
                 .build();
 
         userRepository.save(user);
+
+        walletService.getOrCreateWallet(user);
+
+        notificationService.sendWelcome(user.getEmail(), user.getName());
+
         log.info("New user registered: {}", user.getEmail());
 
         return CompletableFuture.completedFuture("User registered successfully");
@@ -69,10 +75,12 @@ public class AuthService {
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new UnauthorizedException("Invalid credentials");
-            // ⚠️ Never say "wrong password" — always give a generic message
         }
 
         String token = jwtService.generateToken(user.getEmail());
+
+        notificationService.sendLoginAlert(user.getEmail());
+
         log.info("User logged in: {}", user.getEmail());
 
         return CompletableFuture.completedFuture(new LoginResponse(token));
