@@ -100,7 +100,7 @@ const Hero = () => {
   };
 
   return (
-    <section className="relative w-full h-[80vh] sm:h-[90vh] md:min-h-[95svh] overflow-visible">
+    <section className="relative w-full h-[80vh] sm:h-[90vh] md:min-h-[100svh] overflow-visible">
       {/* ✅ Background Image FIXED */}
       <img
         className="
