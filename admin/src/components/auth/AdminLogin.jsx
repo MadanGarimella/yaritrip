@@ -107,9 +107,6 @@ const AdminLogin = () => {
                 <label className="text-sm font-medium text-gray-700">
                   Password
                 </label>
-                <span className="text-sm text-blue-500 cursor-pointer">
-                  Forgot password?
-                </span>
               </div>
 
               <div className="relative mt-1">
@@ -130,11 +127,6 @@ const AdminLogin = () => {
               </div>
             </div>
 
-            {/* Remember Me */}
-            <div className="flex items-center gap-2 text-sm">
-              <input type="checkbox" />
-              <span>Remember me</span>
-            </div>
 
             {/* Button */}
             <button

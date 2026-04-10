@@ -11,6 +11,7 @@ import ProtectedRoute from "./routes/ProtectedRoute";
 import EditPackage from "./pages/EditPackage";
 import CreatePackage from "./pages/CreatePackage";
 import Payments from "./pages/Payments";
+import RegisterAdmin from "./components/auth/RegisterAdmin";
 
 const App = () => {
 
@@ -24,7 +25,6 @@ const App = () => {
 
     const existingData = JSON.parse(localStorage.getItem("appData"));
 
-    // Only initialize if not present (prevents data loss)
     if (!existingData) {
       localStorage.setItem("appData", JSON.stringify(initData));
     }
@@ -33,8 +33,10 @@ const App = () => {
   return (
     <BrowserRouter>
       <Routes>
-        {/* PUBLIC ROUTE */}
+
+        {/* 🌐 PUBLIC ROUTES */}
         <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<RegisterAdmin />} />
 
         {/* 🔐 PROTECTED ADMIN */}
         <Route
@@ -58,8 +60,9 @@ const App = () => {
           <Route index element={<Navigate to="dashboard" />} />
         </Route>
 
-        {/* FALLBACK */}
+        {/* 🚫 FALLBACK */}
         <Route path="*" element={<Navigate to="/login" />} />
+
       </Routes>
     </BrowserRouter>
   );
