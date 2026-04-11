@@ -12,10 +12,11 @@ import EditPackage from "./pages/EditPackage";
 import CreatePackage from "./pages/CreatePackage";
 import Payments from "./pages/Payments";
 import RegisterAdmin from "./components/auth/RegisterAdmin";
+import AdminProfile from "./pages/AdminProfile";
 
 const App = () => {
 
-  // 🔥 INIT CENTRAL DATA (VERY IMPORTANT)
+  // 🔥 INIT CENTRAL DATA
   useEffect(() => {
     const initData = {
       users: [],
@@ -47,7 +48,10 @@ const App = () => {
             </ProtectedRoute>
           }
         >
-          {/* CHILD ROUTES */}
+          {/* DEFAULT */}
+          <Route index element={<Navigate to="dashboard" />} />
+
+          {/* CORE PAGES */}
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="users" element={<Users />} />
           <Route path="bookings" element={<Bookings />} />
@@ -56,8 +60,8 @@ const App = () => {
           <Route path="packages/create" element={<CreatePackage />} />
           <Route path="payments" element={<Payments />} />
 
-          {/* DEFAULT REDIRECT */}
-          <Route index element={<Navigate to="dashboard" />} />
+          {/* ✅ FIXED PROFILE ROUTE */}
+          <Route path="admin/profile" element={<AdminProfile />} />
         </Route>
 
         {/* 🚫 FALLBACK */}

@@ -375,7 +375,7 @@ const Packages = () => {
 
                     {openMenu === p.id && (
                       <div className="absolute right-6 mt-2 w-36 bg-white shadow-lg rounded-lg z-50 border">
-                        {/* <button
+                        <button
                         className="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 w-full text-left text-sm"
                         onClick={() =>
                           navigate(`/packages/edit/${p.id}`, {
@@ -384,7 +384,7 @@ const Packages = () => {
                         }
                       >
                         <FaEdit className="text-gray-600" /> Edit
-                      </button> */}
+                      </button>
 
                         <button
                           onClick={() => {

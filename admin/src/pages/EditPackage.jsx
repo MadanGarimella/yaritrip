@@ -9,145 +9,62 @@ const EditPackage = () => {
   const [form, setForm] = useState(null);
   const [previewImages, setPreviewImages] = useState([]);
 
-  // ✅ FIX 1: Declare BEFORE useEffect
   const normalizeItinerary = (itinerary = []) =>
     itinerary.map((day) => ({
       title: day.title || "",
       description: day.description || day.desc || "",
       activities: day.activities || [],
     }));
+
   const normalizePackage = (pkg) => ({
     ...pkg,
-
-    name: typeof pkg.name === "object" ? pkg.name?.value || "" : pkg.name,
-    location:
-      typeof pkg.location === "object"
-        ? pkg.location?.value || ""
-        : pkg.location,
-
-    price: typeof pkg.price === "object" ? pkg.price?.amount || 0 : pkg.price,
+    name: pkg.name || "",
+    location: pkg.location || "",
+    price: pkg.price || 0,
     images: Array.isArray(pkg.images) ? pkg.images : [],
-
-    bookings:
-      typeof pkg.bookings === "object"
-        ? pkg.bookings?.count || 0
-        : pkg.bookings,
-
-    description:
-      typeof pkg.description === "object"
-        ? pkg.description?.text || ""
-        : pkg.description,
-
-    hotels: (pkg.hotels || []).map((h) =>
-      typeof h === "object" ? h : { name: h },
-    ),
-
-    activities: (pkg.activities || []).map((a) =>
-      typeof a === "object" ? a : { name: a },
-    ),
-
-    itinerary: (pkg.itinerary || []).map((day) => ({
-      title: day.title || "",
-      description: day.description || day.desc || "",
-      activities: day.activities || [],
-    })),
+    hotels: pkg.hotels || [],
+    activities: pkg.activities || [],
+    itinerary: normalizeItinerary(pkg.itinerary),
   });
 
   useEffect(() => {
     const stored = JSON.parse(localStorage.getItem("packages")) || [];
 
-    if (location.state?.packageData) {
-      const data = location.state.packageData;
+    const data = location.state?.packageData || stored.find((p) => p.id === id);
 
+    if (data) {
       const normalized = normalizePackage(data);
 
       setForm({
         ...normalized,
-        days: normalized.days || 1,
-        nights: normalized.nights || 1,
+        days: parseInt(normalized.duration?.split(" ")[0]) || 1,
+        nights: parseInt(normalized.duration?.split(",")[1]) || 1,
         discount: normalized.discount || 0,
         category: normalized.category || "Luxury",
-        status: normalized.status === "Active" || normalized.status === true,
+        status: normalized.status === "Active",
         flightIncluded: normalized.flightIncluded || false,
-        images: normalized.images || [],
-        hotels: normalized.hotels || [],
-        activities: normalized.activities || [],
-        itinerary: normalized.itinerary || [],
       });
 
-      setPreviewImages(normalized.images || []);
-      return;
-    }
-
-    const found = stored.find((p) => p.id === id);
-
-    if (found) {
-      setForm({
-        ...found,
-        days: parseInt(found.duration?.split(" ")[0]) || 1,
-        nights: parseInt(found.duration?.split(",")[1]) || 1,
-        discount: found.discount || 0,
-        category: found.category || "Luxury",
-        status: found.status === "Active",
-        flightIncluded: false,
-        images: found.images || [],
-        hotels: found.hotels || [],
-        activities: found.activities || [],
-        itinerary: normalizeItinerary(found.itinerary),
-      });
-
-      setPreviewImages(found.images || []);
+      setPreviewImages(normalized.images);
     }
   }, [id, location]);
 
   if (!form) return <p className="p-6">Loading...</p>;
 
-  // ✅ FIX 2: Correct handleSave (no nesting)
   const handleSave = () => {
     const stored = JSON.parse(localStorage.getItem("packages")) || [];
 
-    const exists = stored.find((p) => p.id === form.id);
-
-    let updated;
-
-    if (exists) {
-      const cleanForm = normalizePackage({
-        ...form,
-
-        // 🔥 CRITICAL FIX (ADD THIS)
-        images:
-          Array.isArray(form.images) && form.images.length > 0
-            ? form.images
-            : previewImages || [],
-
-        duration: `${form.days} Days, ${form.nights} Nights`,
-        price: Number(String(form.price).replace(/,/g, "")) || 0,
-        status: form.status ? "Active" : "Draft",
-      });
-
-      // ✅ DEBUG HERE
-      console.log("UPDATED PACKAGE:", cleanForm);
-
-      updated = stored.map((p) => (p.id === form.id ? cleanForm : p));
-    } else {
-      const newPackage = normalizePackage({
-        ...form,
-
-        // 🔥 CRITICAL FIX
-        images:
-          Array.isArray(form.images) && form.images.length > 0
-            ? form.images
-            : previewImages || [],
-
-        id: `PKG-${Math.floor(1000 + Math.random() * 900000)}`,
-        duration: `${form.days} Days, ${form.nights} Nights`,
-        price: Number(String(form.price).replace(/,/g, "")) || 0,
-        bookings: 0,
-        updated: new Date().toLocaleDateString(),
-      });
-
-      updated = [newPackage, ...stored];
-    }
+    const updated = stored.map((p) =>
+      p.id === form.id
+        ? {
+            ...form,
+            duration: `${form.days} Days, ${form.nights} Nights`,
+            status: form.status ? "Active" : "Draft",
+            images: previewImages,
+            updated: new Date().toLocaleDateString(),
+          }
+        : p,
+    );
 
     localStorage.setItem("packages", JSON.stringify(updated));
     navigate("/packages");
@@ -156,84 +73,54 @@ const EditPackage = () => {
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files);
 
-    const readers = files.map((file) => {
-      return new Promise((res) => {
-        const reader = new FileReader();
-        reader.onload = () => res(reader.result);
-        reader.readAsDataURL(file);
-      });
-    });
+    const readers = files.map(
+      (file) =>
+        new Promise((res) => {
+          const reader = new FileReader();
+          reader.onload = () => res(reader.result);
+          reader.readAsDataURL(file);
+        }),
+    );
 
-    Promise.all(readers).then((images) => {
-      const updated = [...previewImages, ...images].slice(0, 4);
+    Promise.all(readers).then((imgs) => {
+      const updated = [...previewImages, ...imgs].slice(0, 5);
       setPreviewImages(updated);
-      setForm((prev) => ({
-        ...prev,
-        images: updated,
-      }));
+      setForm({ ...form, images: updated });
     });
   };
 
   const removeItem = (type, index) => {
     const updated = form[type].filter((_, i) => i !== index);
-    setForm((prev) => ({
-      ...prev,
-      [type]: updated,
-    }));
+    setForm({ ...form, [type]: updated });
   };
 
-  // ✅ FIX 3: Proper itinerary object handling
   const addItem = (type) => {
-    if (type === "itinerary") {
-      const title = prompt("Enter Day Title");
-      const description = prompt("Enter Description");
-
-      if (!title) return;
-
-      const newDay = {
-        title,
-        description: description || "",
-        activities: [],
-      };
-
-      setForm({
-        ...form,
-        itinerary: [...(form.itinerary || []), newDay],
-      });
-
-      return;
-    }
-
     const value = prompt(`Enter ${type}`);
     if (!value) return;
-
-    setForm({
-      ...form,
-      [type]: [...(form[type] || []), value],
-    });
+    setForm({ ...form, [type]: [...form[type], value] });
   };
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
+    <div className="p-6 bg-gray-100 min-h-screen">
       {/* HEADER */}
       <div className="flex justify-between mb-6">
         <div>
           <h1 className="text-xl font-semibold">Edit Package: {form.name}</h1>
           <p className="text-sm text-gray-500">
-            Update the details of this travel package.
+            Modify the details of this travel package.
           </p>
         </div>
 
         <div className="flex gap-3">
           <button
             onClick={() => navigate("/packages")}
-            className="border px-4 py-2 rounded-lg"
+            className="px-4 py-2 border rounded-lg"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg"
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg"
           >
             Save Changes
           </button>
@@ -244,192 +131,189 @@ const EditPackage = () => {
         {/* LEFT */}
         <div className="col-span-2 space-y-6">
           {/* BASIC */}
-          <div className="bg-white p-5 rounded-xl border">
-            <h2 className="font-semibold mb-4">Basic Information.</h2>
-
-            <input
+          <Card title="Basic Information">
+            <Input
+              label="Package Title"
               value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              className="w-full border p-2 rounded mb-3"
-              placeholder="Package Title"
+              onChange={(v) => setForm({ ...form, name: v })}
             />
 
-            <div className="grid grid-cols-2 gap-3">
-              <input
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                label="Destination"
                 value={form.location}
-                onChange={(e) => setForm({ ...form, location: e.target.value })}
-                className="border p-2 rounded"
-                placeholder="Destination"
+                onChange={(v) => setForm({ ...form, location: v })}
               />
-
-              <select
+              <Select
+                label="Category"
                 value={form.category}
-                onChange={(e) => setForm({ ...form, category: e.target.value })}
-                className="border p-2 rounded"
-              >
-                <option>Luxury</option>
-                <option>Budget</option>
-                <option>Standard</option>
-              </select>
+                onChange={(v) => setForm({ ...form, category: v })}
+                options={["Luxury", "Budget", "Standard"]}
+              />
             </div>
 
-            <div className="grid grid-cols-2 gap-3 mt-3">
-              <input
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                label="Duration (Days)"
                 value={form.days}
-                onChange={(e) => setForm({ ...form, days: e.target.value })}
-                className="border p-2 rounded"
-                placeholder="Duration (Days)"
+                onChange={(v) => setForm({ ...form, days: v })}
               />
-              <input
+              <Input
+                label="Duration (Nights)"
                 value={form.nights}
-                onChange={(e) => setForm({ ...form, nights: e.target.value })}
-                className="border p-2 rounded"
-                placeholder="Duration (Nights)"
+                onChange={(v) => setForm({ ...form, nights: v })}
               />
             </div>
-          </div>
+          </Card>
 
           {/* MEDIA */}
-          <div className="bg-white p-5 rounded-xl border">
-            <h2 className="font-semibold mb-3">Package Media</h2>
-
+          <Card title="Package Media">
             <div className="flex gap-3 flex-wrap">
               {previewImages.map((img, i) => (
                 <img
                   key={i}
                   src={img}
-                  className="w-28 h-20 rounded object-cover"
+                  className="w-24 h-20 rounded object-cover"
                 />
               ))}
 
-              <label className="w-28 h-20 border flex items-center justify-center cursor-pointer rounded">
-                +
+              <label className="w-24 h-20 border-dashed border flex items-center justify-center cursor-pointer rounded">
+                + Upload
                 <input
-                  type="file"
                   hidden
+                  type="file"
                   multiple
                   onChange={handleImageUpload}
                 />
               </label>
             </div>
-          </div>
+          </Card>
 
           {/* ITINERARY */}
-          <div className="bg-white p-5 rounded-xl border">
-            <div className="flex justify-between mb-3">
-              <h2 className="font-semibold">Itinerary Builder</h2>
-              <button
-                onClick={() => addItem("itinerary")}
-                className="text-blue-600 text-sm"
-              >
-                + Add Day
-              </button>
-            </div>
-
+          <Card title="Itinerary Builder">
             {form.itinerary?.map((day, i) => (
-              <div key={i} className="border p-3 rounded mb-3">
+              <div key={i} className="border p-3 rounded mb-2">
                 <p className="font-medium">{day.title}</p>
                 <p className="text-sm text-gray-500">{day.description}</p>
-
-                {day.activities?.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {day.activities.map((act, idx) => (
-                      <span
-                        key={idx}
-                        className="text-xs bg-gray-100 px-2 py-1 rounded"
-                      >
-                        {act}
-                      </span>
-                    ))}
-                  </div>
-                )}
               </div>
             ))}
-          </div>
+          </Card>
         </div>
 
         {/* RIGHT */}
         <div className="space-y-6">
-          <div className="bg-white p-5 rounded-xl border">
-            <h2 className="font-semibold mb-3">Pricing & Status</h2>
-
-            <input
+          <Card title="Pricing & Status">
+            <Input
+              label="Base Price"
               value={form.price}
-              onChange={(e) => setForm({ ...form, price: e.target.value })}
-              className="w-full border p-2 rounded mb-3"
-              placeholder="Base Price"
+              onChange={(v) => setForm({ ...form, price: v })}
             />
 
-            <input
+            <Input
+              label="Discount (%)"
               value={form.discount}
-              onChange={(e) => setForm({ ...form, discount: e.target.value })}
-              className="w-full border p-2 rounded mb-3"
-              placeholder="Discount %"
+              onChange={(v) => setForm({ ...form, discount: v })}
             />
 
-            <div className="flex justify-between items-center">
-              <span>Package Status</span>
-              <input
-                type="checkbox"
-                className="w-5 h-5 accent-blue-600"
-                checked={form.status}
-                onChange={() => setForm({ ...form, status: !form.status })}
-              />
-            </div>
-          </div>
+            <Toggle
+              label="Active"
+              checked={form.status}
+              onChange={() => setForm({ ...form, status: !form.status })}
+            />
+          </Card>
 
-          {/* HOTELS */}
-          <div className="bg-white p-5 rounded-xl border">
-            <div className="flex justify-between mb-2">
-              <h2 className="font-semibold">Hotels</h2>
-              <button onClick={() => addItem("hotels")}>+ Edit</button>
-            </div>
+          <Card title="Hotels & Activities">
+            <SectionList
+              title="Hotels"
+              items={form.hotels}
+              onAdd={() => addItem("hotels")}
+              onRemove={(i) => removeItem("hotels", i)}
+            />
 
-            {form.hotels?.map((h, i) => (
-              <div key={i} className="flex justify-between text-sm mb-1">
-                <span>{typeof h === "object" ? h.name : h}</span>
-                <button onClick={() => removeItem("hotels", i)}>✕</button>
-              </div>
-            ))}
-          </div>
+            <SectionList
+              title="Activities"
+              items={form.activities}
+              onAdd={() => addItem("activities")}
+              onRemove={(i) => removeItem("activities", i)}
+            />
+          </Card>
 
-          {/* ACTIVITIES */}
-          <div className="bg-white p-5 rounded-xl border">
-            <div className="flex justify-between mb-2">
-              <h2 className="font-semibold">Activities</h2>
-              <button onClick={() => addItem("activities")}>+ Edit</button>
-            </div>
-
-            {form.activities?.map((a, i) => (
-              <div key={i} className="flex justify-between text-sm mb-1">
-                <span>{typeof a === "object" ? a.name : a}</span>
-                <button onClick={() => removeItem("activities", i)}>✕</button>
-              </div>
-            ))}
-          </div>
-
-          {/* TRANSPORT */}
-          <div className="bg-white p-5 rounded-xl border">
-            <h2 className="font-semibold mb-3">Transport</h2>
-
-            <div className="flex justify-between">
-              <span>Flight Included</span>
-              <input
-                type="checkbox"
-                checked={form.flightIncluded}
-                onChange={() =>
-                  setForm({
-                    ...form,
-                    flightIncluded: !form.flightIncluded,
-                  })
-                }
-              />
-            </div>
-          </div>
+          <Card title="Transport">
+            <Toggle
+              label="Flight Included"
+              checked={form.flightIncluded}
+              onChange={() =>
+                setForm({
+                  ...form,
+                  flightIncluded: !form.flightIncluded,
+                })
+              }
+            />
+          </Card>
         </div>
       </div>
     </div>
   );
 };
+
+/* 🔹 UI COMPONENTS */
+
+const Card = ({ title, children }) => (
+  <div className="bg-white p-5 rounded-xl shadow">
+    <h2 className="font-semibold mb-4">{title}</h2>
+    {children}
+  </div>
+);
+
+const Input = ({ label, value, onChange }) => (
+  <div className="mb-3">
+    <p className="text-xs text-gray-500">{label}</p>
+    <input
+      value={value || ""}
+      onChange={(e) => onChange(e.target.value)}
+      className="w-full border p-2 rounded mt-1"
+    />
+  </div>
+);
+
+const Select = ({ label, value, onChange, options }) => (
+  <div className="mb-3">
+    <p className="text-xs text-gray-500">{label}</p>
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="w-full border p-2 rounded mt-1"
+    >
+      {options.map((o) => (
+        <option key={o}>{o}</option>
+      ))}
+    </select>
+  </div>
+);
+
+const Toggle = ({ label, checked, onChange }) => (
+  <div className="flex justify-between items-center mt-3">
+    <span>{label}</span>
+    <input type="checkbox" checked={checked} onChange={onChange} />
+  </div>
+);
+
+const SectionList = ({ title, items, onAdd, onRemove }) => (
+  <div className="mb-4">
+    <div className="flex justify-between mb-2">
+      <p className="text-sm font-medium">{title}</p>
+      <button onClick={onAdd} className="text-blue-600 text-sm">
+        + Add
+      </button>
+    </div>
+
+    {items?.map((item, i) => (
+      <div key={i} className="flex justify-between text-sm mb-1">
+        <span>{typeof item === "object" ? item.name : item}</span>
+        <button onClick={() => onRemove(i)}>✕</button>
+      </div>
+    ))}
+  </div>
+);
 
 export default EditPackage;

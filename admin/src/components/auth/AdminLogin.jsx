@@ -9,7 +9,7 @@ import Logo from "../../assets/images/logo2.png";
 const AdminLogin = () => {
   const navigate = useNavigate();
   const login = useAuthStore((state) => state.login);
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const token = useAuthStore((state) => state.token); // ✅ FIXED
 
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
@@ -17,21 +17,23 @@ const AdminLogin = () => {
 
   // 🔄 Auto redirect if already logged in
   useEffect(() => {
-    if (isAuthenticated) {
+    if (token) {
       navigate("/dashboard");
     }
-  }, [isAuthenticated, navigate]);
+  }, [token, navigate]);
 
   // 🔐 Handle Login
   const handleLogin = async (e) => {
     e.preventDefault();
 
     if (email === "admin@yaritrip.com" && password === "admin123") {
-      await login({
+      login({
         token: "123456",
         user: {
-          name: "Alex Rivera",
-          role: "Super Admin",
+          firstName: "",
+          lastName: "",
+          avatar: "",
+          role: "",
         },
       });
 
@@ -103,11 +105,9 @@ const AdminLogin = () => {
 
             {/* Password */}
             <div>
-              <div className="flex justify-between items-center">
-                <label className="text-sm font-medium text-gray-700">
-                  Password
-                </label>
-              </div>
+              <label className="text-sm font-medium text-gray-700">
+                Password
+              </label>
 
               <div className="relative mt-1">
                 <input
@@ -127,7 +127,6 @@ const AdminLogin = () => {
               </div>
             </div>
 
-
             {/* Button */}
             <button
               type="submit"
@@ -136,14 +135,11 @@ const AdminLogin = () => {
               Login to Dashboard
             </button>
 
-            {/* Footer Note */}
-            <p className="text-xs text-gray-400 text-center mt-4 leading-relaxed">
-              Authorized personnel only. All access attempts are monitored and
-              recorded by the system security team.
+            <p className="text-xs text-gray-400 text-center mt-4">
+              Authorized personnel only.
             </p>
           </form>
 
-          {/* Footer */}
           <p className="text-[10px] text-gray-400 text-center mt-6">
             © 2026 YariTrip Admin System. All rights reserved.
           </p>
