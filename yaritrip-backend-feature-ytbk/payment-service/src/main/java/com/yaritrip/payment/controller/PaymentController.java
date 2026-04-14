@@ -36,4 +36,9 @@ public class PaymentController {
 
         return "Payment Verified";
     }
+
+    @GetMapping("/total-revenue")
+    public Double getTotalRevenue() {
+        return paymentService.getTotalRevenue();    
+    }
 }

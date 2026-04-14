@@ -38,8 +38,7 @@ public class PaymentService {
         // 🔴 Step 3: Idempotency key
         String key = idempotencyService.generateKey(
                 bookingId.toString(),
-                userId.toString()
-        );
+                userId.toString());
 
         Optional<Payment> existing = idempotencyService.checkExisting(key);
 
@@ -65,4 +64,10 @@ public class PaymentService {
 
         return payment;
     }
+
+    public Double getTotalRevenue() {
+        return paymentRepository.sumAllPayments();
+    }
+
+    
 }
