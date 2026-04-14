@@ -1,5 +1,8 @@
 package com.yaritrip.backend.service;
 
+import com.yaritrip.backend.client.PaymentClient;
+import com.yaritrip.backend.client.PaymentRequest;
+import com.yaritrip.backend.client.PaymentResponse;
 import com.yaritrip.backend.dto.BookingRequest;
 import com.yaritrip.backend.model.Booking;
 import com.yaritrip.backend.model.TravelPackage;
@@ -21,102 +24,133 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class BookingService {
 
-    private final BookingRepository bookingRepository;
-    private final UserRepository userRepository;
-    private final TravelPackageRepository travelPackageRepository;
+        private final BookingRepository bookingRepository;
+        private final UserRepository userRepository;
+        private final TravelPackageRepository travelPackageRepository;
 
-    private final WalletService walletService;
-    private final NotificationService notificationService;
+        private final WalletService walletService;
+        private final NotificationService notificationService;
+        private final PaymentClient paymentClient;
 
-    // ================= CREATE BOOKING =================
-    public Booking createBooking(BookingRequest request, String email) {
+        // ================= CREATE BOOKING =================
+        public Booking createBooking(BookingRequest request, String email) {
 
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                User user = userRepository.findByEmail(email)
+                                .orElseThrow(() -> new RuntimeException("User not found"));
 
-        Booking booking = Booking.builder()
-                .packageId(request.getPackageId())
-                .adultCount(0)
-                .childCount(0)
-                .totalAmount(0.0)
-                .status("CREATED")
-                .user(user)
-                .build();
+                Booking booking = Booking.builder()
+                                .packageId(request.getPackageId())
+                                .adultCount(0)
+                                .childCount(0)
+                                .totalAmount(0.0)
+                                .status("CREATED")
+                                .user(user)
+                                .build();
 
-        return bookingRepository.save(booking);
-    }
+                return bookingRepository.save(booking);
+        }
 
-    // ================= CONFIRM BOOKING =================
-    public Booking confirmBooking(UUID bookingId, String email) {
+        // ================= CONFIRM BOOKING =================
+        public Booking confirmBooking(UUID bookingId, String email) {
 
-        Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "Booking not found"));
+                Booking booking = bookingRepository.findById(bookingId)
+                                .orElseThrow(() -> new ResponseStatusException(
+                                                HttpStatus.NOT_FOUND,
+                                                "Booking not found"));
 
-        booking.setStatus("CONFIRMED");
+                booking.setStatus("CONFIRMED");
 
-        Booking updated = bookingRepository.save(booking);
+                Booking updated = bookingRepository.save(booking);
 
-        walletService.rewardBooking(email);
-        notificationService.sendBookingConfirmation(email, booking.getId().toString());
+                walletService.rewardBooking(email);
+                notificationService.sendBookingConfirmation(email, booking.getId().toString());
 
-        return updated;
-    }
+                return updated;
+        }
 
-    // ================= GET BOOKING =================
-    public Booking getBookingById(UUID id) {
-        return bookingRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "Booking not found"));
-    }
+        // ================= GET BOOKING =================
+        public Booking getBookingById(UUID id) {
+                return bookingRepository.findById(id)
+                                .orElseThrow(() -> new ResponseStatusException(
+                                                HttpStatus.NOT_FOUND,
+                                                "Booking not found"));
+        }
 
-    // ================= UPDATE TRAVELLERS =================
-    public Booking updateTravellers(UUID id, BookingRequest request) {
+        // ================= UPDATE TRAVELLERS =================
+        public Booking updateTravellers(UUID id, BookingRequest request) {
 
-        Booking booking = bookingRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "Booking not found"));
+                Booking booking = bookingRepository.findById(id)
+                                .orElseThrow(() -> new ResponseStatusException(
+                                                HttpStatus.NOT_FOUND,
+                                                "Booking not found"));
 
-        TravelPackage pkg = travelPackageRepository.findById(booking.getPackageId())
-                .orElseThrow(() -> new RuntimeException("Package not found"));
+                TravelPackage pkg = travelPackageRepository.findById(booking.getPackageId())
+                                .orElseThrow(() -> new RuntimeException("Package not found"));
 
-        double basePrice = pkg.getPrice() != null ? pkg.getPrice() : 0.0;
+                double basePrice = pkg.getPrice() != null ? pkg.getPrice() : 0.0;
 
-        List<TravellerDetails> travellers = request.getTravellers()
-                .stream()
-                .map(t -> TravellerDetails.builder()
-                        .name(t.getName())
-                        .email(t.getEmail())
-                        .mobile(t.getMobile())
-                        .age(t.getAge())
-                        .gender(t.getGender())
-                        .passport(t.getPassport())
-                        .type(t.getType())
-                        .booking(booking)
-                        .build())
-                .toList();
+                List<TravellerDetails> travellers = request.getTravellers()
+                                .stream()
+                                .map(t -> TravellerDetails.builder()
+                                                .name(t.getName())
+                                                .email(t.getEmail())
+                                                .mobile(t.getMobile())
+                                                .age(t.getAge())
+                                                .gender(t.getGender())
+                                                .passport(t.getPassport())
+                                                .type(t.getType())
+                                                .booking(booking)
+                                                .build())
+                                .toList();
 
-        long adultCount = travellers.stream()
-                .filter(t -> "ADULT".equalsIgnoreCase(t.getType()))
-                .count();
+                long adultCount = travellers.stream()
+                                .filter(t -> "ADULT".equalsIgnoreCase(t.getType()))
+                                .count();
 
-        long childCount = travellers.stream()
-                .filter(t -> "CHILD".equalsIgnoreCase(t.getType()))
-                .count();
+                long childCount = travellers.stream()
+                                .filter(t -> "CHILD".equalsIgnoreCase(t.getType()))
+                                .count();
 
-        double adultTotal = adultCount * basePrice;
-        double childTotal = childCount * (basePrice * 0.75);
-        double totalAmount = adultTotal + childTotal;
+                double adultTotal = adultCount * basePrice;
+                double childTotal = childCount * (basePrice * 0.75);
+                double totalAmount = adultTotal + childTotal;
 
-        booking.getTravellers().clear();
-        booking.setTravellers(travellers);
-        booking.setAdultCount((int) adultCount);
-        booking.setChildCount((int) childCount);
-        booking.setTotalAmount(totalAmount);
+                booking.getTravellers().clear();
+                booking.setTravellers(travellers);
+                booking.setAdultCount((int) adultCount);
+                booking.setChildCount((int) childCount);
+                booking.setTotalAmount(totalAmount);
 
-        return bookingRepository.save(booking);
-    }
+                return bookingRepository.save(booking);
+        }
+
+        public PaymentResponse createPayment(UUID bookingId) {
+
+                Booking booking = bookingRepository.findById(bookingId)
+                                .orElseThrow(() -> new RuntimeException("Booking not found"));
+
+                if (booking.getTotalAmount() <= 0) {
+                        throw new RuntimeException("Invalid booking amount");
+                }
+
+                PaymentRequest request = new PaymentRequest();
+                request.setBookingId(bookingId.toString());
+                request.setAmount(booking.getTotalAmount());
+
+                PaymentResponse response;
+
+                try {
+                        response = paymentClient.createOrder(request);
+                } catch (Exception e) {
+                        // ✅ FALLBACK (since no gateway yet)
+                        response = new PaymentResponse();
+                        response.setOrderId("DEMO_ORDER_" + bookingId);
+                        response.setStatus("CREATED");
+                }
+
+                booking.setStatus("PAYMENT_PENDING");
+                bookingRepository.save(booking);
+
+                return response;
+        }
 }

@@ -103,4 +103,20 @@ public class BookingController {
 
         return ResponseEntity.ok(booking);
     }
+
+    @PostMapping("/{id}/payment")
+    public ResponseEntity<?> createPayment(@PathVariable UUID id) {
+        return ResponseEntity.ok(bookingService.createPayment(id));
+    }
+
+    @PostMapping("/{id}/payment-success")
+    public ResponseEntity<?> paymentSuccess(
+            @PathVariable UUID id,
+            Authentication authentication) {
+
+        String email = authentication.getName();
+
+        return ResponseEntity.ok(
+                bookingService.confirmBooking(id, email));
+    }
 }

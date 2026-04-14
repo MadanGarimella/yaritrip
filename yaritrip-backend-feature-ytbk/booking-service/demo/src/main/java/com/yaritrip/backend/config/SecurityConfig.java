@@ -64,6 +64,7 @@ public class SecurityConfig {
                 .requestMatchers("/images/**").permitAll()
                 // BOOKINGS
                 .requestMatchers("/api/bookings/**").authenticated()
+                .requestMatchers("/api/admin/**").hasRole("ADMIN")
 
                 // AUTH
                 .requestMatchers("/api/auth/register").permitAll()
@@ -85,6 +86,8 @@ public class SecurityConfig {
 
                 //Wallet
                 .requestMatchers("/api/wallet/**").authenticated()
+
+                .requestMatchers("/api/admin/**").hasRole("ADMIN")
 
                 .anyRequest().permitAll()
             )
@@ -126,6 +129,7 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
 
         configuration.setAllowedOrigins(List.of(
+                "http://localhost:5174",
                 "http://localhost:5173",
                 "http://192.168.1.20:5173",
                 "http://10.0.2.2:8081"

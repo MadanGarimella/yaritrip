@@ -2,6 +2,8 @@ package com.yaritrip.backend.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 
 import java.util.List;
@@ -30,16 +32,21 @@ public class Booking {
     @JoinColumn(name = "user_id")
     private User user;
 
-    @Builder.Default
-    @ToString.Exclude
-    @EqualsAndHashCode.Exclude
-    @JsonManagedReference
+    @Column(name = "created_at")
+    private java.time.LocalDateTime date;
+
+    @PrePersist
+    public void prePersist() {
+        this.date = java.time.LocalDateTime.now();
+    }
+
+    @JsonIgnore
     @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
-    private List<TravellerDetails> travellers = new java.util.ArrayList<>();
+    private List<TravellerDetails> travellers;
     
     @Column(name = "adult_count")
-    private int adultCount;
+    private Integer adultCount;
 
     @Column(name = "child_count")
-    private int childCount;
+    private Integer childCount;
 }

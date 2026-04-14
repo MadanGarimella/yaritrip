@@ -5,6 +5,7 @@ import lombok.*;
 import com.yaritrip.backend.model.Activity;
 import com.yaritrip.backend.model.ItineraryDay;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.yaritrip.backend.model.Hotel;
 
 import com.yaritrip.backend.model.Attraction;
 import com.yaritrip.backend.model.City;
@@ -91,4 +92,8 @@ public class TravelPackage {
         @ManyToMany(fetch = FetchType.EAGER)
         @JoinTable(name = "package_attractions", joinColumns = @JoinColumn(name = "package_id"), inverseJoinColumns = @JoinColumn(name = "attraction_id"))
         private List<Attraction> attractions;
+
+        @OneToMany(mappedBy = "travelPackage", cascade = CascadeType.ALL)
+        @JsonIgnore 
+        private List<Hotel> hotels;
 }

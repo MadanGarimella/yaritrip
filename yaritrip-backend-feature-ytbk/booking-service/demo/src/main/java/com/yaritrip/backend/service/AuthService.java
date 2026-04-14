@@ -34,7 +34,7 @@ public class AuthService {
             throw new IllegalArgumentException("Passwords do not match");
         }
 
-        boolean emailExists  = userRepository.existsByEmail(request.getEmail());
+        boolean emailExists = userRepository.existsByEmail(request.getEmail());
         boolean mobileExists = userRepository.existsByMobile(request.getMobile());
 
         if (emailExists) {

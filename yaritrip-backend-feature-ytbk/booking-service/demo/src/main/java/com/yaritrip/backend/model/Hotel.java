@@ -18,11 +18,11 @@ public class Hotel {
     private UUID id;
 
     private String name;
-
     private String roomType;
+    private int nights;
+    private int starRating;
 
-    private Integer stars;
-
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne
+    @JoinColumn(name = "package_id")
     private TravelPackage travelPackage;
 }
