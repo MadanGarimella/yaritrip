@@ -7,6 +7,7 @@ import {
   FaEllipsisV,
 } from "react-icons/fa";
 import { useNavigate, useLocation } from "react-router-dom";
+import api from "../services/api";
 
 // DEFAULT DATA
 const defaultData = [
@@ -102,22 +103,30 @@ const Packages = () => {
   });
 
   useEffect(() => {
-    const loadPackages = () => {
-      const stored = JSON.parse(localStorage.getItem("packages"));
-      if (stored) {
-        setPackagesData(stored.map(normalizePackage));
-      } else {
-        localStorage.setItem("packages", JSON.stringify(defaultData));
-        setPackagesData(defaultData.map(normalizePackage));
+    const fetchPackages = async () => {
+      try {
+        const res = await api.get("/packages");
+
+        const normalized = res.data.map((pkg, index) => ({
+          id: pkg.id, // ✅ REAL UUID (IMPORTANT)
+          name: pkg.title, // ✅ FIXED
+          location: pkg.location,
+          duration: `${pkg.nights || 1} Days`, // ✅ FIXED
+          price: pkg.price || 0,
+          bookings: 0, // ❗ not available yet
+          status: "Active", // ❗ default for now
+          updated: new Date().toLocaleDateString(),
+
+          // ✅ VERY IMPORTANT FIX
+          images: pkg.image ? [`http://localhost:8082${pkg.image}`] : [],
+        }));
+        setPackagesData(normalized);
+      } catch (err) {
+        console.error("Packages fetch error:", err);
       }
     };
 
-    loadPackages();
-
-    // 👇 ADD THIS (auto refresh when coming back)
-    window.addEventListener("focus", loadPackages);
-
-    return () => window.removeEventListener("focus", loadPackages);
+    fetchPackages();
   }, []);
 
   // FILTER BY TAB + SEARCH
@@ -213,9 +222,9 @@ const Packages = () => {
   };
 
   return (
-    <div className="max-w-[1400px] mx-auto px-4">
+    <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
       {/* HEADER */}
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-semibold">Packages Management</h1>
           <p className="text-gray-500 text-sm">
@@ -225,7 +234,7 @@ const Packages = () => {
 
         <button
           onClick={() => navigate("/packages/create")}
-          className="bg-blue-600 text-white px-5 py-2 rounded-lg"
+          className="bg-blue-600 text-white px-5 py-2 rounded-lg w-full sm:w-auto"
         >
           + Create New Package
         </button>
@@ -238,7 +247,7 @@ const Packages = () => {
         <StatCard
           title="Active"
           value={activePackages}
-          // extra={`${activePercentage}%`}
+          extra={`${activePercentage}%`}
         />
 
         <StatCard
@@ -250,7 +259,7 @@ const Packages = () => {
       </div>
 
       {/* TABS */}
-      <div className="flex gap-3 mb-4">
+      <div className="flex flex-wrap gap-2 mb-4">
         {dynamicTabs.map((tab) => (
           <button
             key={tab}
@@ -266,7 +275,7 @@ const Packages = () => {
 
       {/* FILTER */}
       <div className="bg-white p-4 rounded-xl shadow mb-4 w-full">
-        <div className="relative w-[260px]">
+        <div className="relative w-full sm:max-w-[300px]">
           <FaSearch className="absolute top-3 left-3 text-gray-400" />
           <input
             type="text"
@@ -280,7 +289,7 @@ const Packages = () => {
 
       {/* TABLE */}
       <div className="bg-white rounded-xl shadow overflow-x-auto">
-        <table className="w-full text-sm border-separate border-spacing-y-3 table-fixed">
+        <table className="min-w-[900px] w-full text-sm border-separate border-spacing-y-3">
           <thead className="text-gray-500 text-sm">
             <tr>
               <th className="w-[120px] text-left px-4">ID</th>
@@ -307,7 +316,7 @@ const Packages = () => {
                     className="px-4 py-3 text-left text-blue-600 whitespace-nowrap cursor-pointer"
                     onClick={() => setSelectedPackage(p)}
                   >
-                    #{p.id}
+                    #{p.id.substring(0, 6)}
                   </td>
 
                   {/* PACKAGE DETAILS */}
@@ -375,16 +384,18 @@ const Packages = () => {
 
                     {openMenu === p.id && (
                       <div className="absolute right-6 mt-2 w-36 bg-white shadow-lg rounded-lg z-50 border">
-                        <button
-                        className="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 w-full text-left text-sm"
-                        onClick={() =>
-                          navigate(`/packages/edit/${p.id}`, {
-                            state: { packageData: p },
-                          })
+                        {
+                          <button
+                            className="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 w-full text-left text-sm"
+                            onClick={() =>
+                              navigate(`/packages/edit/${p.id}`, {
+                                state: { packageData: p },
+                              })
+                            }
+                          >
+                            <FaEdit className="text-gray-600" /> Edit
+                          </button>
                         }
-                      >
-                        <FaEdit className="text-gray-600" /> Edit
-                      </button>
 
                         <button
                           onClick={() => {
@@ -407,8 +418,8 @@ const Packages = () => {
       {/* ================= POPUP ================= */}
       {/* ================= FINAL POPUP ================= */}
       {selectedPackage && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[999]">
-          <div className="bg-white w-[1000px] max-h-[90vh] rounded-xl shadow-xl flex flex-col">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[999] p-4">
+          <div className="bg-white w-full max-w-5xl max-h-[90vh] rounded-xl shadow-xl flex flex-col">
             {/* HEADER */}
             <div className="p-6 border-b relative">
               <FaTimes
@@ -427,9 +438,9 @@ const Packages = () => {
             {/* BODY */}
             <div className="p-6 overflow-y-auto">
               {/* IMAGES */}
-              <div className="grid grid-cols-3 gap-5 mb-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                 {/* MAIN IMAGE */}
-                <div className="col-span-2 h-[300px] bg-gray-200 rounded-xl overflow-hidden">
+                <div className="md:col-span-2 h-[220px] sm:h-[300px] bg-gray-200 rounded-xl overflow-hidden">
                   {selectedPackage.images?.length > 0 ? (
                     <img
                       src={displayImages[0]}
@@ -443,7 +454,7 @@ const Packages = () => {
                 </div>
 
                 {/* SIDE IMAGES */}
-                <div className="flex flex-col gap-4">
+                <div className="flex md:flex-col gap-4">
                   {/* SECOND IMAGE */}
                   <div className="h-[140px] bg-gray-200 rounded-xl overflow-hidden">
                     <img
@@ -469,7 +480,7 @@ const Packages = () => {
               </div>
 
               {/* INFO */}
-              <div className="grid grid-cols-4 gap-4 mb-6">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
                 <InfoBox label="Duration" value={selectedPackage.duration} />
                 <InfoBox
                   label="Starts From"
@@ -483,7 +494,7 @@ const Packages = () => {
               </div>
 
               {/* CONTENT */}
-              <div className="grid grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* LEFT */}
                 <div className="col-span-2 space-y-5">
                   <div>
@@ -561,8 +572,8 @@ const Packages = () => {
 
       {/* DELETE CONFIRMATION MODAL */}
       {deleteModal?.id && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[1000]">
-          <div className="bg-white w-[420px] rounded-xl p-6 text-center relative shadow-lg">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[1000] p-4">
+          <div className="bg-white w-full max-w-md rounded-xl p-6 text-center relative shadow-lg">
             {/* CLOSE */}
             <FaTimes
               className="absolute right-4 top-4 text-gray-400 cursor-pointer"
