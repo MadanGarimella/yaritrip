@@ -21,6 +21,11 @@ public class WishlistController {
 
     @GetMapping
     public ResponseEntity<?> getWishlist(Authentication authentication) {
+
+        if (authentication == null) {
+            return ResponseEntity.status(401).body("Unauthorized");
+        }
+
         String email = authentication.getName();
 
         List<TravelPackage> wishlist = wishlistService.getWishlistByEmail(email);

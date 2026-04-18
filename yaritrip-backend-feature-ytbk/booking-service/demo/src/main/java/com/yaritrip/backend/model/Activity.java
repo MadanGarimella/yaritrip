@@ -5,6 +5,8 @@ import lombok.*;
 
 import java.util.UUID;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+
 @Entity
 @Getter
 @Setter
@@ -17,20 +19,13 @@ public class Activity {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(nullable = false)
     private String name;
 
-    @Column(nullable = false)
-    private Double price;
+    @Column(length = 2000)
+    private String description; // ✅ ADD THIS
 
-    @Column(nullable = false)
-    private Boolean optional;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "travel_package_id", nullable = false)
+    @ManyToOne
+    @JoinColumn(name = "package_id")
+    @JsonBackReference
     private TravelPackage travelPackage;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "itinerary_day_id")
-    private ItineraryDay itineraryDay;
 }

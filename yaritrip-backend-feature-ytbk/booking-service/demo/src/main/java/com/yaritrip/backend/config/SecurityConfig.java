@@ -60,17 +60,19 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers("/favicon.ico").permitAll()
 
-                // STATIC
+                // Static Resources
+                .requestMatchers("/css/**").permitAll()
+                .requestMatchers("/js/**").permitAll()
                 .requestMatchers("/images/**").permitAll()
-                // BOOKINGS
+                // Bookings
                 .requestMatchers("/api/bookings/**").authenticated()
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
 
-                // AUTH
+                // Auth
                 .requestMatchers("/api/auth/register").permitAll()
                 .requestMatchers("/api/auth/login").permitAll()
 
-                // 🔹 PUBLIC APIs
+                // Public Api's
                 .requestMatchers("/api/attractions/popular").permitAll()
                 .requestMatchers("/api/attraction-packages/*").permitAll()
                 .requestMatchers("/api/cities").permitAll()

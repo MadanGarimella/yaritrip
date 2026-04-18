@@ -17,75 +17,83 @@ import com.yaritrip.backend.model.User;
 @RequiredArgsConstructor
 public class WishlistService {
 
-    private final WishlistRepository wishlistRepository;
-    private final UserRepository userRepository;
-    private final TravelPackageRepository travelPackageRepository;
+        private final WishlistRepository wishlistRepository;
+        private final UserRepository userRepository;
+        private final TravelPackageRepository travelPackageRepository;
 
-    public void addToWishlist(UUID userId, UUID packageId) {
+        public void addToWishlist(UUID userId, UUID packageId) {
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                User user = userRepository.findById(userId)
+                                .orElseThrow(() -> new RuntimeException("User not found"));
 
-        TravelPackage pkg = travelPackageRepository.findById(packageId)
-                .orElseThrow(() -> new RuntimeException("Package not found"));
+                TravelPackage pkg = travelPackageRepository.findById(packageId)
+                                .orElseThrow(() -> new RuntimeException("Package not found"));
 
-        if (wishlistRepository.findByUserAndTravelPackage(user, pkg).isPresent()) {
-            return; // already exists (idempotent)
+                if (wishlistRepository.findByUserAndTravelPackage(user, pkg).isPresent()) {
+                        return; // already exists (idempotent)
+                }
+
+                Wishlist wishlist = Wishlist.builder()
+                                .user(user)
+                                .travelPackage(pkg)
+                                .build();
+
+                wishlistRepository.save(wishlist);
         }
 
-        Wishlist wishlist = Wishlist.builder()
-                .user(user)
-                .travelPackage(pkg)
-                .build();
+        public void removeFromWishlist(UUID userId, UUID packageId) {
+                User user = userRepository.findById(userId).orElseThrow();
+                TravelPackage pkg = travelPackageRepository.findById(packageId).orElseThrow();
 
-        wishlistRepository.save(wishlist);
-    }
-
-    public void removeFromWishlist(UUID userId, UUID packageId) {
-        User user = userRepository.findById(userId).orElseThrow();
-        TravelPackage pkg = travelPackageRepository.findById(packageId).orElseThrow();
-
-        wishlistRepository.deleteByUserAndTravelPackage(user, pkg);
-    }
-
-    public List<TravelPackage> getWishlistByEmail(String email) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        return wishlistRepository.findByUser(user)
-                .stream()
-                .map(Wishlist::getTravelPackage)
-                .toList();
-    }
-
-    public void addToWishlistByEmail(String email, UUID packageId) {
-
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        TravelPackage pkg = travelPackageRepository.findById(packageId)
-                .orElseThrow(() -> new RuntimeException("Package not found"));
-
-        if (wishlistRepository.findByUserAndTravelPackage(user, pkg).isPresent()) {
-            return;
+                wishlistRepository.deleteByUserAndTravelPackage(user, pkg);
         }
 
-        Wishlist wishlist = Wishlist.builder()
-                .user(user)
-                .travelPackage(pkg)
-                .build();
+        public List<TravelPackage> getWishlistByEmail(String email) {
 
-        wishlistRepository.save(wishlist);
-    }
+                User user = userRepository.findByEmail(email)
+                                .orElseThrow(() -> new RuntimeException("User not found"));
 
-    public void removeFromWishlistByEmail(String email, UUID packageId) {
+                return wishlistRepository.findByUser(user)
+                                .stream()
+                                .map(w -> {
+                                        TravelPackage pkg = w.getTravelPackage();
 
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                                        // ✅ FORCE LOAD (prevents lazy loading crash)
+                                        pkg.getId();
 
-        TravelPackage pkg = travelPackageRepository.findById(packageId)
-                .orElseThrow(() -> new RuntimeException("Package not found"));
+                                        return pkg;
+                                })
+                                .toList();
+        }
 
-        wishlistRepository.deleteByUserAndTravelPackage(user, pkg);
-    }
+        public void addToWishlistByEmail(String email, UUID packageId) {
+
+                User user = userRepository.findByEmail(email)
+                                .orElseThrow(() -> new RuntimeException("User not found"));
+
+                TravelPackage pkg = travelPackageRepository.findById(packageId)
+                                .orElseThrow(() -> new RuntimeException("Package not found"));
+
+                if (wishlistRepository.findByUserAndTravelPackage(user, pkg).isPresent()) {
+                        return;
+                }
+
+                Wishlist wishlist = Wishlist.builder()
+                                .user(user)
+                                .travelPackage(pkg)
+                                .build();
+
+                wishlistRepository.save(wishlist);
+        }
+
+        public void removeFromWishlistByEmail(String email, UUID packageId) {
+
+                User user = userRepository.findByEmail(email)
+                                .orElseThrow(() -> new RuntimeException("User not found"));
+
+                TravelPackage pkg = travelPackageRepository.findById(packageId)
+                                .orElseThrow(() -> new RuntimeException("Package not found"));
+
+                wishlistRepository.deleteByUserAndTravelPackage(user, pkg);
+        }
 }

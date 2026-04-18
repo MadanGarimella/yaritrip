@@ -8,6 +8,7 @@ import java.util.UUID;
 @Data
 @Builder
 @AllArgsConstructor
+@Getter
 @NoArgsConstructor
 public class PackageResponse {
 
@@ -18,10 +19,11 @@ public class PackageResponse {
     private Double rating;
     private Double price;
     private UUID originalPackageId;
-    private List<String> itinerary;
     private List<String> features;
     private List<String> highlights;
     private String image;
     private List<String> images;
     private String overview;
+    private List<ItineraryDTO> itinerary;
+    private List<ActivityDTO> activities;
 }

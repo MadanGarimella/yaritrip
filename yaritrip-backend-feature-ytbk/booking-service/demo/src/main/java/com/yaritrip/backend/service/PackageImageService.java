@@ -17,14 +17,15 @@ public class PackageImageService {
 
         File folder = new File(IMAGE_PATH + destination.toLowerCase());
 
+        // ❌ NO DEFAULT IMAGE
         if (!folder.exists() || !folder.isDirectory()) {
-            return List.of("/images/packages/default.jpg");
+            return List.of(); // ✅ return empty list
         }
 
         File[] files = folder.listFiles();
 
         if (files == null) {
-            return List.of("/images/packages/default.jpg");
+            return List.of(); // ✅ empty list
         }
 
         return Arrays.stream(files)

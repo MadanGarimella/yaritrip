@@ -30,42 +30,29 @@ public class BookingController {
     private final BookingService bookingService;
     private final TravelPackageRepository travelPackageRepository;
 
-    // ================= AUTH HELPER =================
     private String getAuthenticatedEmail(Authentication authentication) {
         if (authentication == null || authentication.getName() == null) {
-            log.error("Unauthorized access attempt to booking API");
+            log.error("Unauthorized access attempt");
             throw new AccessDeniedException("User not authenticated");
         }
         return authentication.getName();
     }
 
-    // ================= CREATE BOOKING =================
     @PostMapping
     public ResponseEntity<Booking> createBooking(
             @RequestBody BookingRequest request,
             Authentication authentication) {
 
         String email = getAuthenticatedEmail(authentication);
-
-        log.info("Creating booking for user: {}", email);
-
         Booking booking = bookingService.createBooking(request, email);
 
         return ResponseEntity.ok(booking);
     }
 
-    // ================= GET BOOKING + PACKAGE =================
     @GetMapping("/{id}")
     public ResponseEntity<BookingDetailsResponse> getBooking(@PathVariable UUID id) {
 
-        log.info("Fetching booking details for id: {}", id);
-
         Booking booking = bookingService.getBookingById(id);
-
-        if (booking.getPackageId() == null) {
-            log.error("Package ID missing in booking: {}", id);
-            throw new RuntimeException("Package missing in booking");
-        }
 
         TravelPackage pkg = travelPackageRepository.findById(booking.getPackageId())
                 .orElseThrow(() -> new RuntimeException("Package not found"));
@@ -73,7 +60,6 @@ public class BookingController {
         return ResponseEntity.ok(new BookingDetailsResponse(booking, pkg));
     }
 
-    // ================= UPDATE TRAVELLERS =================
     @PutMapping("/{id}/travellers")
     public ResponseEntity<Booking> updateTravellers(
             @PathVariable UUID id,
@@ -82,22 +68,17 @@ public class BookingController {
 
         String email = getAuthenticatedEmail(authentication);
 
-        log.info("Updating travellers for booking: {} by user: {}", id, email);
-
         Booking updated = bookingService.updateTravellers(id, request);
 
-        return ResponseEntity.ok(updated);
+        return ResponseEntity.ok(updated); // ✅ FIXED (was "bookings")
     }
 
-    // ================= CONFIRM BOOKING =================
     @PostMapping("/{id}/confirm")
     public ResponseEntity<Booking> confirmBooking(
             @PathVariable UUID id,
             Authentication authentication) {
 
         String email = getAuthenticatedEmail(authentication);
-
-        log.info("Confirming booking: {} by user: {}", id, email);
 
         Booking booking = bookingService.confirmBooking(id, email);
 

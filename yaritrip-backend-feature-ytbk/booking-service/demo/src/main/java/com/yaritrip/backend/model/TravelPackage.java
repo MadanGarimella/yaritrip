@@ -3,7 +3,7 @@ package com.yaritrip.backend.model;
 import jakarta.persistence.*;
 import lombok.*;
 import com.yaritrip.backend.model.Activity;
-import com.yaritrip.backend.model.ItineraryDay;
+import com.yaritrip.backend.model.Itinerary;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.yaritrip.backend.model.Hotel;
 
@@ -44,17 +44,13 @@ public class TravelPackage {
         @JoinColumn(name = "to_city_id", nullable = false)
         private City toCity;
 
-        @OneToMany(mappedBy = "travelPackage", cascade = CascadeType.ALL)
-        @JsonManagedReference
-        @JsonIgnore // ✅ ADD THIS LINE
+        @OneToMany(mappedBy = "travelPackage", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
         private List<PackageImage> images;
 
-        @OneToMany(mappedBy = "travelPackage", cascade = CascadeType.ALL)
-        @JsonIgnore
-        private List<ItineraryDay> itineraryDays;
+        @OneToMany(mappedBy = "travelPackage", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+        private List<Itinerary> itineraries;
 
-        @OneToMany(mappedBy = "travelPackage", cascade = CascadeType.ALL)
-        @JsonIgnore
+        @OneToMany(mappedBy = "travelPackage", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
         private List<Activity> activities;
         // -----------------------------
         // TRAVEL INFO
@@ -94,6 +90,6 @@ public class TravelPackage {
         private List<Attraction> attractions;
 
         @OneToMany(mappedBy = "travelPackage", cascade = CascadeType.ALL)
-        @JsonIgnore 
+        @JsonIgnore
         private List<Hotel> hotels;
 }

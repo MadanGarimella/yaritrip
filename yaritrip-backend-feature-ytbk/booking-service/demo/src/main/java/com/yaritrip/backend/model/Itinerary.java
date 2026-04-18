@@ -5,7 +5,7 @@ import lombok.*;
 
 import java.util.UUID;
 
-import com.yaritrip.backend.model.TravelPackage;
+import com.fasterxml.jackson.annotation.JsonBackReference;
 
 @Entity
 @Getter
@@ -13,17 +13,21 @@ import com.yaritrip.backend.model.TravelPackage;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class ItineraryDay {
-@Id
+public class Itinerary {
+
+    @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
     private int dayNumber;
 
+    private String title; // ✅ ADD THIS
+
     @Column(length = 3000)
     private String description;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne
     @JoinColumn(name = "package_id")
+    @JsonBackReference
     private TravelPackage travelPackage;
 }

@@ -5,10 +5,8 @@ import lombok.*;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-@Builder
-public class ItineraryDTO {
+public class ActivityDTO {
 
-    private int dayNumber;
-    private String title; // ✅ ADD THIS
+    private String name;
     private String description;
 }

@@ -29,6 +29,9 @@ public class User {
     @Column(nullable = false)
     private String password;
 
-    @Builder.Default    
+    @Column(name = "profile_image")
+    private String profileImage;
+
+    @Builder.Default
     private String role = "USER";
 }

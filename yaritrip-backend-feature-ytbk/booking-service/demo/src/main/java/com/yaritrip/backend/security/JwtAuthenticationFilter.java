@@ -35,9 +35,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             FilterChain filterChain)
             throws ServletException, IOException {
 
+        String path = request.getRequestURI();
+
+        // ✅ CRITICAL FIX → SKIP STATIC FILES
+        if (path.startsWith("/images/") || path.startsWith("/static/")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         String authHeader = request.getHeader("Authorization");
 
-        // ✅ No token → allow request (public endpoints)
+        // ✅ No token → allow public endpoints
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
@@ -63,7 +71,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         var user = userRepository.findByEmail(email).orElse(null);
 
-        // ❌ USER NOT FOUND → CRITICAL FIX
+        // ❌ USER NOT FOUND
         if (user == null) {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.getWriter().write("User not found");
