@@ -7,17 +7,25 @@ import com.yaritrip.backend.dto.UpdatePackageRequest;
 import com.yaritrip.backend.model.Activity;
 import com.yaritrip.backend.model.City;
 import com.yaritrip.backend.model.Itinerary;
+import com.yaritrip.backend.model.PackageImage;
 import com.yaritrip.backend.model.TravelPackage;
 import com.yaritrip.backend.repository.ActivityRepository;
 import com.yaritrip.backend.repository.CityRepository;
 import com.yaritrip.backend.repository.TravelPackageRepository;
+import com.yaritrip.backend.repository.PackageImageRepository;
+import com.yaritrip.backend.repository.ItineraryRepository;
+
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDate;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -26,143 +34,223 @@ public class TravelPackageService {
         private final TravelPackageRepository travelPackageRepository;
         private final CityRepository cityRepository;
         private final ActivityRepository activityRepository;
+        private final PackageImageRepository packageImageRepository;
+        private final ItineraryRepository itineraryRepository;
 
-        public TravelPackage create(
-                        UUID fromCityId,
-                        UUID destinationCityId,
-                        LocalDate departureDate,
-                        int totalRooms,
-                        int guestsPerRoom) {
+        // private final ItineraryRepository itineraryRepository;
+        // ===========================
+        // 🔥 CREATE PACKAGE
+        // ===========================
+        @Transactional
+        public TravelPackage createPackage(CreatePackageRequest request) {
 
-                City fromCity = cityRepository.findById(fromCityId)
-                                .orElseThrow(() -> new RuntimeException("From city not found"));
+                // ✅ CREATE / FIND CITY
+                City toCity = cityRepository.findByNameIgnoreCase(request.getLocation())
+                                .orElseGet(() -> {
+                                        City newCity = City.builder()
+                                                        .name(request.getLocation())
+                                                        .code(request.getLocation().substring(0, 3).toUpperCase())
+                                                        .country("India")
+                                                        .build();
+                                        return cityRepository.save(newCity);
+                                });
 
-                City destinationCity = cityRepository.findById(destinationCityId)
-                                .orElseThrow(() -> new RuntimeException("Destination city not found"));
+                // ✅ DEFAULT FROM CITY (TEMP FIX)
+                City fromCity = cityRepository.findByNameIgnoreCase("Hyderabad")
+                                .orElseThrow(() -> new RuntimeException("Default city not found"));
 
+                // ✅ BUILD PACKAGE
                 TravelPackage pkg = TravelPackage.builder()
                                 .fromCity(fromCity)
-                                .toCity(destinationCity)
-                                .departureDate(departureDate)
-                                .totalRooms(totalRooms)
-                                .guestsPerRoom(guestsPerRoom)
+                                .toCity(toCity)
+
+                                // 🔥 REQUIRED FIXES
+                                .departureDate(LocalDate.now().plusDays(2))
+                                .totalRooms(10)
+                                .guestsPerRoom(2)
+
+                                .totalDays(request.getTotalDays())
+                                .category(request.getCategory())
+                                .overview(request.getOverview())
+                                .price(request.getPrice())
+                                .rating(4.5)
+                                .bannerImageUrl(
+                                                request.getImages() != null && !request.getImages().isEmpty()
+                                                                ? request.getImages().get(0)
+                                                                : null)
                                 .build();
+
+                TravelPackage saved = travelPackageRepository.save(pkg);
+
+                // ✅ SAVE IMAGES
+                if (request.getImages() != null) {
+                        List<PackageImage> images = request.getImages().stream()
+                                        .map(img -> PackageImage.builder()
+                                                        .imageUrl(img)
+                                                        .travelPackage(saved)
+                                                        .build())
+                                        .toList();
+
+                        packageImageRepository.saveAll(images);
+                }
+
+                // ✅ SAVE ITINERARY
+                if (request.getItinerary() != null) {
+                        List<Itinerary> itineraryList = request.getItinerary().stream()
+                                        .map(i -> Itinerary.builder()
+                                                        .dayNumber(i.getDayNumber())
+                                                        .title(i.getTitle())
+                                                        .description(i.getDescription())
+                                                        .travelPackage(saved)
+                                                        .build())
+                                        .toList();
+
+                        itineraryRepository.saveAll(itineraryList);
+                }
+
+                // ✅ SAVE ACTIVITIES
+                if (request.getActivities() != null) {
+                        List<Activity> activityList = request.getActivities().stream()
+                                        .map(a -> Activity.builder()
+                                                        .name(a.getName())
+                                                        .description(a.getDescription())
+                                                        .price(a.getPrice())
+                                                        .travelPackage(saved)
+                                                        .build())
+                                        .toList();
+
+                        activityRepository.saveAll(activityList);
+                }
+
+                return saved;
+        }
+
+        // ===========================
+        // 🔥 UPDATE PACKAGE (FULL SYNC FIX)
+        // ===========================
+        @Transactional
+        public TravelPackage updatePackage(UUID id, UpdatePackageRequest req) {
+
+                TravelPackage pkg = travelPackageRepository.findByIdWithImages(id)
+                                .orElseThrow(() -> new RuntimeException("Package not found"));
+
+                pkg.setPrice(req.getPrice());
+                pkg.setTotalDays(req.getTotalDays());
+                pkg.setCategory(req.getCategory());
+                pkg.setOverview(req.getOverview());
+                pkg.setRating(req.getRating());
+
+                // ITINERARY RESET
+                pkg.getItineraries().clear();
+
+                if (req.getItinerary() != null) {
+                        for (ItineraryDTO dto : req.getItinerary()) {
+                                Itinerary it = new Itinerary();
+                                it.setDayNumber(dto.getDayNumber());
+                                it.setTitle(dto.getTitle());
+                                it.setDescription(dto.getDescription());
+                                it.setTravelPackage(pkg);
+                                pkg.getItineraries().add(it);
+                        }
+                }
+
+                // ACTIVITIES RESET
+                pkg.getActivities().clear();
+
+                if (req.getActivities() != null) {
+                        for (ActivityDTO dto : req.getActivities()) {
+                                Activity act = new Activity();
+                                act.setName(dto.getName());
+                                act.setDescription(dto.getDescription());
+                                act.setPrice(dto.getPrice());
+                                act.setTravelPackage(pkg);
+                                pkg.getActivities().add(act);
+                        }
+                }
 
                 return travelPackageRepository.save(pkg);
         }
 
-        @Transactional
-        public TravelPackage getPackageById(UUID id) {
-                return travelPackageRepository.findById(id)
-                                .orElseThrow(() -> new RuntimeException("Package not found"));
-        }
-
-        @Transactional
+        // ===========================
+        // 🔥 SEARCH (FIXED)
+        // ===========================
         public List<TravelPackage> searchPackages(
-                        String fromCode,
-                        String toCode,
-                        LocalDate selectedDate,
+                        String from,
+                        String to,
+                        LocalDate date,
                         int rooms,
                         int guests) {
 
-                City fromCity = cityRepository.findByCode(fromCode)
-                                .orElseThrow(() -> new RuntimeException("From city not found"));
-
-                City toCity = cityRepository.findByCode(toCode)
-                                .orElseThrow(() -> new RuntimeException("Destination city not found"));
-
-                return travelPackageRepository.searchPackages(
-                                fromCity.getId(),
-                                toCity.getId(),
-                                selectedDate,
+                return travelPackageRepository.searchByCityNames(
+                                from,
+                                to,
+                                date,
                                 rooms,
                                 guests);
         }
 
-        @Transactional
-        public TravelPackage updatePackage(UUID id, UpdatePackageRequest request) {
+        // ===========================
+        // IMAGE UPLOAD
+        // ===========================
+        public String uploadImage(UUID id, MultipartFile file) {
+                try {
 
-                TravelPackage existing = travelPackageRepository.findById(id)
-                                .orElseThrow(() -> new RuntimeException("Package not found"));
+                        TravelPackage pkg = travelPackageRepository.findById(id)
+                                        .orElseThrow(() -> new RuntimeException("Package not found"));
 
-                if (request.getPrice() != null)
-                        existing.setPrice(request.getPrice());
+                        String uploadDir = "uploads/";
+                        File dir = new File(uploadDir);
+                        if (!dir.exists())
+                                dir.mkdirs();
 
-                if (request.getTotalDays() != null)
-                        existing.setTotalDays(request.getTotalDays());
+                        String fileName = UUID.randomUUID() + "_" + file.getOriginalFilename();
+                        Path path = Paths.get(uploadDir + fileName);
 
-                if (request.getCategory() != null)
-                        existing.setCategory(request.getCategory());
+                        Files.write(path, file.getBytes());
 
-                // ✅ CORRECT METHOD NAME (IMPORTANT)
-                if (existing.getItineraries() == null) {
-                        existing.setItineraries(new java.util.ArrayList<>());
-                }
+                        String url = "/uploads/" + fileName;
 
-                if (existing.getActivities() == null) {
-                        existing.setActivities(new java.util.ArrayList<>());
-                }
+                        PackageImage img = PackageImage.builder()
+                                        .imageUrl(url)
+                                        .travelPackage(pkg)
+                                        .build();
 
-                // 🔥 ITINERARY FIX
-                if (request.getItinerary() != null) {
-
-                        existing.getItineraries().clear();
-
-                        for (ItineraryDTO dto : request.getItinerary()) {
-
-                                Itinerary day = new Itinerary();
-                                day.setDayNumber(dto.getDayNumber());
-                                day.setDescription(dto.getDescription());
-                                day.setTravelPackage(existing);
-
-                                existing.getItineraries().add(day);
+                        if (pkg.getImages() == null) {
+                                pkg.setImages(new ArrayList<>());
                         }
-                }
 
-                // 🔥 ACTIVITY FIX
-                if (request.getActivities() != null) {
+                        pkg.getImages().add(img);
 
-                        existing.getActivities().clear();
-
-                        for (ActivityDTO dto : request.getActivities()) {
-
-                                Activity act = new Activity();
-                                act.setName(dto.getName());
-                                act.setTravelPackage(existing);
-
-                                existing.getActivities().add(act);
+                        if (pkg.getImages().size() == 1) {
+                                pkg.setBannerImageUrl(url);
                         }
-                }
 
-                return travelPackageRepository.save(existing);
+                        travelPackageRepository.save(pkg);
+
+                        return url;
+
+                } catch (Exception e) {
+                        throw new RuntimeException("Image upload failed", e);
+                }
         }
 
-        @Transactional
-        public TravelPackage createPackage(CreatePackageRequest req) {
+        // ===========================
+        // 🔥 AUTO CITY CREATION
+        // ===========================
+        private City getOrCreateCity(String name) {
 
-                City fromCity = cityRepository.findById(req.getFromCityId())
-                                .orElseThrow(() -> new RuntimeException("From city not found"));
+                return cityRepository.findByNameIgnoreCase(name)
+                                .orElseGet(() -> {
+                                        City city = new City();
 
-                City toCity = cityRepository.findById(req.getToCityId())
-                                .orElseThrow(() -> new RuntimeException("To city not found"));
+                                        city.setName(name);
 
-                TravelPackage pkg = TravelPackage.builder()
-                                .fromCity(fromCity)
-                                .toCity(toCity)
-                                .departureDate(LocalDate.parse(req.getDepartureDate()))
-                                .totalRooms(req.getTotalRooms())
-                                .guestsPerRoom(req.getGuestsPerRoom())
-                                .totalDays(req.getTotalDays())
-                                .category(req.getCategory())
-                                .overview(req.getOverview())
-                                .price(req.getPrice())
-                                .build();
+                                        String code = name.substring(0, Math.min(3, name.length())).toUpperCase();
+                                        city.setCode(code);
 
-                // 🔥 HANDLE IMAGES (TEMP)
-                if (req.getImages() != null && !req.getImages().isEmpty()) {
-                        pkg.setBannerImageUrl(req.getImages().get(0)); // first image
-                }
+                                        city.setCountry("India");
 
-                return travelPackageRepository.save(pkg);
+                                        return cityRepository.save(city);
+                                });
         }
 }

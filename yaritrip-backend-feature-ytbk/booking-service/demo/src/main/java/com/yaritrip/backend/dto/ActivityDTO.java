@@ -3,10 +3,12 @@ package com.yaritrip.backend.dto;
 import lombok.*;
 
 @Data
-@AllArgsConstructor
+@Builder  
 @NoArgsConstructor
+@AllArgsConstructor
 public class ActivityDTO {
 
     private String name;
     private String description;
+    private Double price; 
 }

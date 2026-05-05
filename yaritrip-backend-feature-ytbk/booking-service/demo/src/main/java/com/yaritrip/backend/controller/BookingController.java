@@ -6,6 +6,7 @@ import com.yaritrip.backend.model.Booking;
 import com.yaritrip.backend.model.TravelPackage;
 import com.yaritrip.backend.service.BookingService;
 import com.yaritrip.backend.repository.TravelPackageRepository;
+import com.yaritrip.backend.repository.BookingRepository;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,6 +17,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
+import java.util.Map;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 @RestController
@@ -28,6 +32,7 @@ import java.util.UUID;
 public class BookingController {
 
     private final BookingService bookingService;
+    private final BookingRepository bookingRepository;
     private final TravelPackageRepository travelPackageRepository;
 
     private String getAuthenticatedEmail(Authentication authentication) {
@@ -53,9 +58,14 @@ public class BookingController {
     public ResponseEntity<BookingDetailsResponse> getBooking(@PathVariable UUID id) {
 
         Booking booking = bookingService.getBookingById(id);
+        TravelPackage pkg = booking.getTravelPackage();
 
-        TravelPackage pkg = travelPackageRepository.findById(booking.getPackageId())
-                .orElseThrow(() -> new RuntimeException("Package not found"));
+        if (pkg == null) {
+            throw new RuntimeException("Package not found");
+        }
+
+        // 🔥 FORCE INIT SAFE DATA
+        pkg.setImages(null); // prevent lazy loading crash
 
         return ResponseEntity.ok(new BookingDetailsResponse(booking, pkg));
     }
@@ -100,4 +110,5 @@ public class BookingController {
         return ResponseEntity.ok(
                 bookingService.confirmBooking(id, email));
     }
+
 }

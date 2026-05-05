@@ -13,39 +13,60 @@ import java.util.UUID;
 
 public interface TravelPackageRepository extends JpaRepository<TravelPackage, UUID> {
 
-    // ✅ 1. DESTINATIONS
-    @Query("""
-                SELECT DISTINCT p.toCity
-                FROM TravelPackage p
-                WHERE p.fromCity.id = :fromCityId
-            """)
-    List<City> findDestinationsByFromCity(@Param("fromCityId") UUID fromCityId);
+        // ================= DESTINATIONS =================
+        @Query("""
+                            SELECT DISTINCT p.toCity
+                            FROM TravelPackage p
+                            WHERE p.fromCity.id = :fromCityId
+                        """)
+        List<City> findDestinationsByFromCity(@Param("fromCityId") UUID fromCityId);
 
-    // ✅ 2. SEARCH (SAFE - NO MULTIPLE BAG FETCH)
-    @Query("""
-                SELECT DISTINCT p FROM TravelPackage p
-                JOIN FETCH p.fromCity
-                JOIN FETCH p.toCity
-                WHERE p.fromCity.id = :fromId
-                AND p.toCity.id = :toId
-                AND p.departureDate <= :selectedDate
-                AND p.totalRooms >= :rooms
-                AND (p.guestsPerRoom * :rooms) >= :guests
-            """)
-    List<TravelPackage> searchPackages(
-            @Param("fromId") UUID fromId,
-            @Param("toId") UUID toId,
-            @Param("selectedDate") LocalDate selectedDate,
-            @Param("rooms") int rooms,
-            @Param("guests") int guests);
+        // ================= SEARCH =================
+        @Query("""
+                            SELECT DISTINCT p FROM TravelPackage p
+                            JOIN FETCH p.fromCity
+                            JOIN FETCH p.toCity
+                            WHERE LOWER(p.fromCity.name) LIKE LOWER(CONCAT('%', :from, '%'))
+                            AND LOWER(p.toCity.name) LIKE LOWER(CONCAT('%', :to, '%'))
+                            AND p.departureDate <= :selectedDate
+                            AND p.totalRooms >= :rooms
+                            AND (p.guestsPerRoom * :rooms) >= :guests
+                        """)
+        List<TravelPackage> searchByCityNames(
+                        @Param("from") String from,
+                        @Param("to") String to,
+                        @Param("selectedDate") LocalDate selectedDate,
+                        @Param("rooms") int rooms,
+                        @Param("guests") int guests);
 
-    // ✅ 3. FETCH IMAGES ONLY
-    @Query("""
-                SELECT tp FROM TravelPackage tp
-                LEFT JOIN FETCH tp.images
-                WHERE tp.id = :id
-            """)
-    Optional<TravelPackage> findByIdWithImages(@Param("id") UUID id);
+        // ================= SAFE FETCH (ONLY ONE COLLECTION) =================
+        // 🔥 THIS FIXES YOUR 500 ERROR
+        @Query("""
+                            SELECT tp FROM TravelPackage tp
+                            JOIN FETCH tp.fromCity
+                            JOIN FETCH tp.toCity
+                            LEFT JOIN FETCH tp.images
+                            WHERE tp.id = :id
+                        """)
+        Optional<TravelPackage> findByIdWithImages(@Param("id") UUID id);
 
-    Optional<TravelPackage> findById(UUID id);
+        // ================= FETCH WITH CITIES ONLY =================
+        @Query("""
+                            SELECT tp FROM TravelPackage tp
+                            JOIN FETCH tp.fromCity
+                            JOIN FETCH tp.toCity
+                            WHERE tp.id = :id
+                        """)
+        Optional<TravelPackage> findByIdWithCities(@Param("id") UUID id);
+
+        // ================= ADMIN LIST =================
+        @Query("""
+                            SELECT DISTINCT p FROM TravelPackage p
+                            JOIN FETCH p.fromCity
+                            JOIN FETCH p.toCity
+                        """)
+        List<TravelPackage> findAllWithCities();
+
+        // ================= DASHBOARD =================
+        long countByToCity(City city);
 }

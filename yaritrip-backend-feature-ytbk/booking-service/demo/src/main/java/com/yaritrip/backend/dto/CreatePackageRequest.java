@@ -1,11 +1,21 @@
 package com.yaritrip.backend.dto;
 
-import java.util.List;
-import java.util.UUID; 
-
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.util.List;
+import java.util.UUID;
+
 @Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
 public class CreatePackageRequest {
+
+    private String location;     
+    private Integer totalDays;
 
     private UUID fromCityId;
     private UUID toCityId;
@@ -14,12 +24,14 @@ public class CreatePackageRequest {
 
     private int totalRooms;
     private int guestsPerRoom;
-    private int totalDays;
 
     private String category;
     private String overview;
 
     private Double price;
 
-    private List<String> images; // base64
+    private List<String> images;
+
+    private List<ItineraryDTO> itinerary;
+    private List<ActivityDTO> activities;
 }

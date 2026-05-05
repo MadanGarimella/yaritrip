@@ -6,6 +6,7 @@ import lombok.*;
 import java.util.UUID;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 @Entity
 @Getter
@@ -22,10 +23,14 @@ public class Activity {
     private String name;
 
     @Column(length = 2000)
-    private String description; // ✅ ADD THIS
+    private String description; // ADD THIS
+
+    @Column
+    private Double price;
 
     @ManyToOne
     @JoinColumn(name = "package_id")
     @JsonBackReference
+    @JsonIgnore
     private TravelPackage travelPackage;
 }

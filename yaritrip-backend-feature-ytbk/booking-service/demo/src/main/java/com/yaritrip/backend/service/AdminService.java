@@ -3,31 +3,46 @@ package com.yaritrip.backend.service;
 import com.yaritrip.backend.client.PaymentClient;
 import com.yaritrip.backend.dto.AdminDashboardResponse;
 import com.yaritrip.backend.model.Booking;
+import com.yaritrip.backend.model.PackageImage;
+import com.yaritrip.backend.model.TravelPackage;
 import com.yaritrip.backend.repository.BookingRepository;
 import com.yaritrip.backend.repository.TravelPackageRepository;
 import com.yaritrip.backend.repository.UserRepository;
+import com.yaritrip.backend.repository.PackageImageRepository;
+import com.yaritrip.backend.repository.CityRepository;
 
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
+import lombok.Setter;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.*;
+import java.io.File;
+import java.nio.file.Path;
 
 @Service
+@Getter
+@Setter
 @RequiredArgsConstructor
 public class AdminService {
 
-    private final UserRepository userRepo;
-    private final BookingRepository bookingRepo;
-    private final TravelPackageRepository packageRepo;
+    private final UserRepository userRepository;
+    private final BookingRepository bookingRepository;
+    private final TravelPackageRepository travelPackageRepository;
     private final PaymentClient paymentClient;
+    private final WalletService walletService;
+    private final NotificationService notificationService;
 
+    // ================= DASHBOARD =================
     public AdminDashboardResponse getDashboardStats() {
 
-        long users = userRepo.count();
-        long bookings = bookingRepo.count();
-        long packages = packageRepo.count();
+        long users = userRepository.count();
+        long bookings = bookingRepository.count();
+        long packages = travelPackageRepository.count();
 
         Double revenue;
         try {
@@ -35,90 +50,115 @@ public class AdminService {
         } catch (Exception e) {
             revenue = 0.0;
         }
+
         if (revenue == null)
             revenue = 0.0;
 
         return new AdminDashboardResponse(users, bookings, revenue, packages);
     }
 
+    // ================= REVENUE =================
     public List<Map<String, Object>> getMonthlyRevenue() {
 
-        List<Object[]> results = bookingRepo.getMonthlyRevenue();
+        List<Object[]> results = bookingRepository.getMonthlyRevenue();
 
-        return results.stream().map(obj -> {
-            Map<String, Object> map = new java.util.HashMap<>();
+        List<Map<String, Object>> response = new ArrayList<>();
+
+        for (Object[] obj : results) {
+            Map<String, Object> map = new HashMap<>();
             map.put("month", obj[0]);
             map.put("revenue", obj[1]);
-            return map;
-        }).toList();
+            response.add(map);
+        }
+
+        return response;
     }
 
+    // ================= DESTINATIONS =================
     public List<Map<String, Object>> getBookingsByDestination() {
-        return bookingRepo.getBookingsByDestination();
+
+        List<Object[]> results = bookingRepository.getBookingsByDestination();
+
+        List<Map<String, Object>> response = new ArrayList<>();
+
+        for (Object[] row : results) {
+            Map<String, Object> map = new HashMap<>();
+            map.put("destination", row[0]);
+            map.put("count", row[1]);
+            response.add(map);
+        }
+
+        return response;
     }
 
+    // ================= RECENT BOOKINGS =================
     public List<Map<String, Object>> getRecentBookings() {
 
-        List<Booking> bookings = bookingRepo.findTop5ByOrderByDateDesc();
+        List<Booking> bookings = bookingRepository.findTop5WithDetails();
 
-        return java.util.stream.IntStream.range(0, bookings.size())
-                .mapToObj(i -> {
+        List<Map<String, Object>> response = new ArrayList<>();
 
-                    Booking b = bookings.get(i);
+        for (int i = 0; i < bookings.size(); i++) {
 
-                    Map<String, Object> map = new java.util.HashMap<>();
+            Booking b = bookings.get(i);
+            Map<String, Object> map = new HashMap<>();
 
-                    // 🔥 DESTINATION FIX
-                    String destination = "N/A";
-                    String cityCode = "UNK";
+            // ✅ DESTINATION FIX (correct relation usage)
+            String destination = "N/A";
+            String cityCode = "UNK";
 
-                    if (b.getPackageId() != null) {
-                        var pkgOpt = packageRepo.findById(b.getPackageId());
+            if (b.getTravelPackage() != null &&
+                    b.getTravelPackage().getToCity() != null) {
 
-                        if (pkgOpt.isPresent() && pkgOpt.get().getToCity() != null) {
-                            destination = pkgOpt.get().getToCity().getName();
+                destination = b.getTravelPackage().getToCity().getName();
 
-                            cityCode = destination.length() >= 3
-                                    ? destination.substring(0, 3).toUpperCase()
-                                    : destination.toUpperCase();
-                        }
-                    }
+                cityCode = destination.length() >= 3
+                        ? destination.substring(0, 3).toUpperCase()
+                        : destination.toUpperCase();
+            }
 
-                    // 🔥 BOOKING ID FIX
-                    String bookingId = cityCode + (i + 1);
+            // ✅ BOOKING ID
+            String bookingId = cityCode + (i + 1);
 
-                    // 🔥 DATE FIX
-                    String date = b.getDate() != null
-                            ? b.getDate().toLocalDate().toString()
-                            : "N/A";
+            // ✅ DATE
+            String date = (b.getDate() != null)
+                    ? b.getDate().toLocalDate().toString()
+                    : "N/A";
 
-                    // 🔥 AMOUNT FIX
-                    double amount = Math.round(b.getTotalAmount() * 100.0) / 100.0;
+            // ✅ AMOUNT (null safe)
+            double amount = b.getTotalAmount() != null
+                    ? Math.round(b.getTotalAmount() * 100.0) / 100.0
+                    : 0.0;
 
-                    // 🔥 USER FIX
-                    String user = (b.getUser() != null)
-                            ? b.getUser().getName()
-                            : "User";
+            // ✅ USER
+            String user = (b.getUser() != null)
+                    ? b.getUser().getName()
+                    : "User";
 
-                    // 🔥 STATUS FIX
-                    String status = b.getStatus() != null ? b.getStatus() : "Pending";
+            // ✅ STATUS
+            String status = (b.getStatus() != null)
+                    ? b.getStatus()
+                    : "Pending";
 
-                    // 🔥 FINAL MAP
-                    map.put("id", bookingId);
-                    map.put("user", user);
-                    map.put("destination", destination);
-                    map.put("date", date);
-                    map.put("amount", amount);
-                    map.put("status", status);
+            map.put("id", bookingId);
+            map.put("user", user);
+            map.put("destination", destination);
+            map.put("date", date);
+            map.put("amount", amount);
+            map.put("status", status);
 
-                    return map;
+            response.add(map);
+        }
 
-                }).toList();
+        return response;
     }
 
+    // ================= USERS =================
     public List<Map<String, Object>> getAllUsers() {
 
-        return userRepo.findAll().stream().map(u -> {
+        List<Map<String, Object>> response = new ArrayList<>();
+
+        userRepository.findAll().forEach(u -> {
 
             Map<String, Object> map = new HashMap<>();
 
@@ -127,59 +167,99 @@ public class AdminService {
             map.put("email", u.getEmail());
             map.put("mobile", u.getMobile());
 
-            // 🔥 FIX: avoid crash if null
-            long bookingCount = bookingRepo.countByUserId(u.getId());
+            long bookingCount = bookingRepository.countByUserId(u.getId());
             map.put("bookingCount", bookingCount);
 
-            map.put("createdAt", null); // if not present in DB
+            map.put("createdAt", null);
 
-            return map;
+            response.add(map);
+        });
 
-        }).toList();
+        return response;
     }
 
+    // ================= BOOKINGS =================
     public List<Map<String, Object>> getAllBookings() {
 
-        List<Booking> bookings = bookingRepo.findAllByOrderByDateDesc();
+        List<Booking> bookings = bookingRepository.findAllWithDetails();
 
-        return java.util.stream.IntStream.range(0, bookings.size())
-                .mapToObj(i -> {
+        List<Map<String, Object>> response = new ArrayList<>();
 
-                    Booking b = bookings.get(i);
+        for (int i = 0; i < bookings.size(); i++) {
 
-                    Map<String, Object> map = new HashMap<>();
+            Booking b = bookings.get(i);
+            Map<String, Object> map = new HashMap<>();
 
-                    // 🔹 BOOKING ID
-                    map.put("id", "BKG-" + (i + 1));
+            map.put("id", "BKG-" + (i + 1));
 
-                    // 🔹 USER
-                    map.put("user", b.getUser() != null ? b.getUser().getName() : "User");
+            map.put("user",
+                    b.getUser() != null ? b.getUser().getName() : "User");
 
-                    // 🔹 DESTINATION
-                    String destination = "N/A";
-                    if (b.getPackageId() != null) {
-                        var pkg = packageRepo.findById(b.getPackageId());
-                        if (pkg.isPresent() && pkg.get().getToCity() != null) {
-                            destination = pkg.get().getToCity().getName();
-                        }
-                    }
-                    map.put("destination", destination);
+            String destination = "N/A";
 
-                    // 🔹 DATE
-                    map.put("date",
-                            b.getDate() != null
-                                    ? b.getDate().toLocalDate().toString()
-                                    : "N/A");
+            if (b.getTravelPackage() != null &&
+                    b.getTravelPackage().getToCity() != null) {
 
-                    // 🔹 AMOUNT
-                    map.put("amount", b.getTotalAmount());
+                destination = b.getTravelPackage().getToCity().getName();
+            }
 
-                    // 🔹 STATUS
-                    map.put("status",
-                            b.getStatus() != null ? b.getStatus() : "Pending");
+            map.put("destination", destination);
 
-                    return map;
+            map.put("date",
+                    b.getDate() != null
+                            ? b.getDate().toLocalDate().toString()
+                            : "N/A");
 
-                }).toList();
+            map.put("amount",
+                    b.getTotalAmount() != null ? b.getTotalAmount() : 0);
+
+            map.put("status",
+                    b.getStatus() != null ? b.getStatus() : "Pending");
+
+            response.add(map);
+        }
+
+        return response;
+    }
+
+    // ================= IMAGE UPLOAD =================
+    public String uploadImage(UUID id, MultipartFile file) {
+
+        try {
+            TravelPackage pkg = travelPackageRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("Package not found"));
+
+            String uploadDir = "uploads/";
+            File dir = new File(uploadDir);
+            if (!dir.exists())
+                dir.mkdirs();
+
+            String fileName = System.currentTimeMillis() + "_" + file.getOriginalFilename();
+            Path path = Paths.get(uploadDir + fileName);
+            Files.write(path, file.getBytes());
+
+            String url = "/uploads/" + fileName;
+
+            PackageImage img = new PackageImage();
+            img.setImageUrl(url);
+            img.setTravelPackage(pkg);
+
+            if (pkg.getImages() == null) {
+                pkg.setImages(new ArrayList<>());
+            }
+
+            pkg.getImages().add(img);
+
+            if (pkg.getBannerImageUrl() == null) {
+                pkg.setBannerImageUrl(url);
+            }
+
+            travelPackageRepository.save(pkg);
+
+            return url;
+
+        } catch (Exception e) {
+            throw new RuntimeException("Image upload failed", e);
+        }
     }
 }

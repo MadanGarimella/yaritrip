@@ -13,6 +13,7 @@ import com.yaritrip.backend.service.TravelPackageService;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -30,16 +31,20 @@ public class SearchController {
         private final TravelPackageService service;
         private final PackageImageService imageService;
 
+        // ✅ GET ALL CITIES
         @GetMapping("/cities")
         public List<City> getCities() {
                 return cityRepository.findAll();
         }
 
+        // ✅ GET DESTINATIONS
         @GetMapping("/destinations")
         public List<City> getDestinations(@RequestParam UUID fromCityId) {
                 return travelPackageRepository.findDestinationsByFromCity(fromCityId);
         }
 
+        // ✅ SEARCH PACKAGES
+        @Transactional(readOnly = true)
         @GetMapping("/search")
         public List<PackageResponse> searchPackages(
                         @RequestParam String fromCode,
@@ -62,48 +67,70 @@ public class SearchController {
 
                                 .map(pkg -> {
 
-                                        String toCity = pkg.getToCity().getName();
+                                        String toCity = pkg.getToCity() != null
+                                                        ? pkg.getToCity().getName()
+                                                        : "Unknown";
 
-                                        List<String> images = imageService.getImagesForDestination(toCity);
+                                        // SAFE IMAGE HANDLING
+                                        List<String> images = Optional.ofNullable(
+                                                        imageService.getImagesForDestination(toCity))
+                                                        .orElse(Collections.emptyList());
 
-                                        String imageUrl = (!images.isEmpty())
+                                        String imageUrl = !images.isEmpty()
                                                         ? "http://localhost:8082" + images.get(0)
-                                                        : null;
+                                                        : "";
 
-                                        double price = pkg.getPrice() != null ? pkg.getPrice() : 0;
+                                        // SAFE PRICE
+                                        double price = Optional.ofNullable(pkg.getPrice()).orElse(0.0);
 
-                                        // ✅ FIXED ITINERARY (DTO)
-                                        List<ItineraryDTO> itinerary = pkg.getItineraries() != null
-                                                        ? pkg.getItineraries().stream().map(i -> ItineraryDTO.builder()
+                                        // FIXED NIGHTS LOGIC
+                                        int nights = pkg.getTotalDays() != null
+                                                        ? Math.max(pkg.getTotalDays() - 1, 0)
+                                                        : 0;
+
+                                        // ITINERARY FIX
+                                        List<ItineraryDTO> itinerary = Optional.ofNullable(pkg.getItineraries())
+                                                        .orElse(Collections.emptyList())
+                                                        .stream()
+                                                        .sorted(Comparator.comparingInt(i -> i.getDayNumber()))
+                                                        .map(i -> ItineraryDTO.builder()
                                                                         .dayNumber(i.getDayNumber())
-                                                                        .title(i.getTitle())
-                                                                        .description(i.getDescription())
-                                                                        .build()).collect(Collectors.toList())
-                                                        : Collections.emptyList();
+                                                                        .title("Day " + i.getDayNumber())
+                                                                        .description(
+                                                                                        i.getDescription() != null
+                                                                                                        ? i.getDescription()
+                                                                                                        : "Plan for Day "
+                                                                                                                        + i.getDayNumber())
+                                                                        .build())
+                                                        .collect(Collectors.toList());
 
-                                        // ✅ FIXED ACTIVITIES
-                                        List<ActivityDTO> activities = pkg.getActivities() != null
-                                                        ? pkg.getActivities().stream()
-                                                                        .map(a -> new ActivityDTO(a.getName(),
-                                                                                        a.getDescription()))
-                                                                        .collect(Collectors.toList())
-                                                        : Collections.emptyList();
+                                        // Activities
+                                        List<ActivityDTO> activities = Optional.ofNullable(pkg.getActivities())
+                                                        .orElse(Collections.emptyList())
+                                                        .stream()
+                                                        .map(a -> ActivityDTO.builder()
+                                                                        .name(a.getName())
+                                                                        .description(a.getDescription())
+                                                                        .price(a.getPrice() != null ? a.getPrice()
+                                                                                        : 0.0) 
+                                                                        .build())
+                                                        .collect(Collectors.toList());
 
                                         return PackageResponse.builder()
                                                         .id(pkg.getId())
                                                         .title("Premium " + toCity + " Deal")
                                                         .location(toCity)
-                                                        .nights(pkg.getTotalDays())
+                                                        .nights(nights) // ✅ FIXED
                                                         .price(price)
-                                                        .rating(pkg.getRating() != null ? pkg.getRating() : 4.5)
+                                                        .rating(Optional.ofNullable(pkg.getRating()).orElse(4.5))
                                                         .image(imageUrl)
                                                         .images(images)
-                                                        .itinerary(itinerary) // ✅ FIXED
-                                                        .activities(activities) // ✅ FIXED
+                                                        .overview(pkg.getOverview())
+                                                        .itinerary(itinerary)
+                                                        .activities(activities)
                                                         .build();
                                 })
-
-                                .sorted(Comparator.comparingDouble(PackageResponse::getPrice))
+                                .sorted(Comparator.comparingDouble(PackageResponse::getPrice))//Sorting by price
                                 .collect(Collectors.toList());
         }
 }

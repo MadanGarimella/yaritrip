@@ -22,9 +22,11 @@ public class Booking {
     @GeneratedValue
     private UUID id;
 
-    private UUID packageId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "package_id")
+    private TravelPackage travelPackage;
 
-    private double totalAmount;
+    private Double totalAmount;
 
     private String status;
 
@@ -43,10 +45,16 @@ public class Booking {
     @JsonIgnore
     @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     private List<TravellerDetails> travellers;
-    
+
     @Column(name = "adult_count")
     private Integer adultCount;
 
     @Column(name = "child_count")
     private Integer childCount;
+
+    @Column(name = "booking_ref")
+    private String bookingRef;
+
+    @Column(name = "transaction_id")
+    private String transactionId;
 }

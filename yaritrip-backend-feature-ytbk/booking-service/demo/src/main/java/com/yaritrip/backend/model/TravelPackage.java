@@ -2,19 +2,11 @@ package com.yaritrip.backend.model;
 
 import jakarta.persistence.*;
 import lombok.*;
-import com.yaritrip.backend.model.Activity;
-import com.yaritrip.backend.model.Itinerary;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.yaritrip.backend.model.Hotel;
-
-import com.yaritrip.backend.model.Attraction;
-import com.yaritrip.backend.model.City;
 
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
-
-import com.fasterxml.jackson.annotation.JsonManagedReference;
 
 @Entity
 @Table(indexes = {
@@ -33,28 +25,27 @@ public class TravelPackage {
         @GeneratedValue(strategy = GenerationType.UUID)
         private UUID id;
 
-        // -----------------------------
         // ROUTE
-        // -----------------------------
-        @ManyToOne(fetch = FetchType.EAGER)
+        @ManyToOne(fetch = FetchType.LAZY)
         @JoinColumn(name = "from_city_id", nullable = false)
         private City fromCity;
 
-        @ManyToOne(fetch = FetchType.EAGER)
+        @ManyToOne(fetch = FetchType.LAZY)
         @JoinColumn(name = "to_city_id", nullable = false)
         private City toCity;
 
-        @OneToMany(mappedBy = "travelPackage", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+        // IMPORTANT: LAZY to avoid performance issues
+        @OneToMany(mappedBy = "travelPackage", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+        @JsonIgnore
         private List<PackageImage> images;
 
-        @OneToMany(mappedBy = "travelPackage", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+        @OneToMany(mappedBy = "travelPackage", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
         private List<Itinerary> itineraries;
 
-        @OneToMany(mappedBy = "travelPackage", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+        @OneToMany(mappedBy = "travelPackage", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
         private List<Activity> activities;
-        // -----------------------------
+
         // TRAVEL INFO
-        // -----------------------------
         @Column(nullable = false)
         private LocalDate departureDate;
 
@@ -70,26 +61,24 @@ public class TravelPackage {
         @Column(nullable = false)
         private String category;
 
-        // -----------------------------
         // DISPLAY INFO
-        // -----------------------------
         @Column(length = 3000)
         private String overview;
 
         private Double rating;
 
+        // FIX: allow large base64 image
+        @Column(columnDefinition = "TEXT")
         private String bannerImageUrl;
 
         private Double price;
 
-        // -----------------------------
         // RELATIONS
-        // -----------------------------
-        @ManyToMany(fetch = FetchType.EAGER)
+        @ManyToMany(fetch = FetchType.LAZY)
         @JoinTable(name = "package_attractions", joinColumns = @JoinColumn(name = "package_id"), inverseJoinColumns = @JoinColumn(name = "attraction_id"))
         private List<Attraction> attractions;
 
-        @OneToMany(mappedBy = "travelPackage", cascade = CascadeType.ALL)
+        @OneToMany(mappedBy = "travelPackage", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
         @JsonIgnore
         private List<Hotel> hotels;
 }

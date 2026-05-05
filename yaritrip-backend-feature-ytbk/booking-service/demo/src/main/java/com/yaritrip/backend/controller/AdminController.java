@@ -1,5 +1,6 @@
 package com.yaritrip.backend.controller;
 
+import com.yaritrip.backend.dto.UpdatePackageRequest;
 import com.yaritrip.backend.model.TravelPackage;
 import com.yaritrip.backend.repository.TravelPackageRepository;
 import com.yaritrip.backend.service.AdminService;
@@ -8,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -57,54 +59,5 @@ public class AdminController {
     @GetMapping("/bookings")
     public ResponseEntity<?> getAllBookings() {
         return ResponseEntity.ok(adminService.getAllBookings());
-    }
-
-    @RestController
-    @RequestMapping("/api/admin/packages")
-    @RequiredArgsConstructor
-    public class AdminPackageController {
-
-        private final TravelPackageRepository repo;
-
-        @GetMapping
-        public List<Map<String, Object>> getAllPackages() {
-
-            return repo.findAll().stream().map(pkg -> {
-
-                Map<String, Object> map = new HashMap<>();
-
-                map.put("id", pkg.getId());
-
-                map.put("name",
-                        pkg.getFromCity().getName() + " to " + pkg.getToCity().getName());
-
-                map.put("location", pkg.getToCity().getName());
-
-                map.put("duration",
-                        pkg.getTotalDays() + " Days");
-
-                map.put("price", pkg.getPrice());
-
-                map.put("bookings", 0); // we can enhance later
-
-                map.put("status", "Active");
-
-                map.put("updated",
-                        pkg.getDepartureDate() != null
-                                ? pkg.getDepartureDate().toString()
-                                : "N/A");
-
-                map.put("image", pkg.getBannerImageUrl());
-
-                return map;
-
-            }).toList();
-        }
-
-        @PostMapping
-        public ResponseEntity<?> createPackage(@RequestBody TravelPackage pkg) {
-
-            return ResponseEntity.ok(repo.save(pkg));
-        }
     }
 }

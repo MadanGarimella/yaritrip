@@ -6,6 +6,7 @@ import lombok.*;
 import java.util.UUID;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 @Entity
 @Getter
@@ -29,5 +30,6 @@ public class Itinerary {
     @ManyToOne
     @JoinColumn(name = "package_id")
     @JsonBackReference
+    @JsonIgnore
     private TravelPackage travelPackage;
 }

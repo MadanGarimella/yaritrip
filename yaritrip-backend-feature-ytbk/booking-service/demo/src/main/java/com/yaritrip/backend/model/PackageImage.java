@@ -19,6 +19,7 @@ public class PackageImage {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    @Column(columnDefinition = "TEXT")
     private String imageUrl;
 
     @ManyToOne
